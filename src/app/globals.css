@@ -145,7 +145,8 @@ h1, h2, h3 { letter-spacing: -0.02em; }
   transition: background 0.13s ease, border-color 0.13s ease, box-shadow 0.13s ease, transform 0.06s ease;
 }
 .btn:hover { background: var(--surface-2); border-color: var(--text-faint); }
-.btn:active { transform: translateY(1px); box-shadow: none; }
+/* Тактилен отклик при натискане — леко „хлътване“, не скок. */
+.btn:active:not(:disabled) { transform: scale(0.97); box-shadow: none; }
 .btn:disabled { opacity: 0.42; cursor: not-allowed; box-shadow: none; }
 .btn:disabled:hover { background: var(--surface); border-color: var(--border-strong); }
 
@@ -509,8 +510,12 @@ table.sched-grid tbody td.day-cell.holiday { background: color-mix(in srgb, var(
 .neg { color: var(--error); }
 .pos { color: var(--ok); }
 
+/* Подсветката на реда е преход, а не прещракване. Клетките с кодове нямат
+   преход — там реакцията на въвеждане трябва да е мигновена. */
+tr.emp-row td { transition: background 0.14s ease; }
 tr.emp-row:hover td { background: var(--surface-2); }
 tr.emp-row:hover td.day-cell.weekend { background: var(--surface-3); }
+tr.emp-row td.day-cell { transition: none; }
 
 /* ── Печат (D.8.2) ──────────────────────────────────────────────────────── */
 
@@ -766,3 +771,72 @@ a { color: var(--accent-text); }
   box-shadow: var(--shadow-2), 0 0 0 1px var(--accent);
 }
 @media print { .save-bar { display: none !important; } }
+
+/* ── Падащ списък ───────────────────────────────────────────────────────── */
+
+.dd { position: relative; width: 100%; }
+.dd-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  cursor: pointer;
+  /* Стрелката се рисува от компонента, за да може да се завърта. */
+  background-image: none !important;
+  padding-right: 10px;
+}
+.dd-button:disabled { cursor: not-allowed; opacity: 0.55; }
+.dd-value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-caret { display: inline-flex; color: var(--text-dim); flex: 0 0 auto; }
+.dd-button.is-open { border-color: var(--border-strong); }
+
+.dd-list {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 260px;
+  padding: 4px;
+  box-shadow: var(--shadow-pop);
+}
+.dd-option {
+  display: block;
+  width: 100%;
+  padding: 7px 9px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.dd-option.is-active { background: var(--surface-2); }
+.dd-option.is-current { font-weight: 700; color: var(--accent-text); }
+.dd-option.is-current.is-active { background: var(--accent-soft); }
+
+/* ── Печат и намалено движение ──────────────────────────────────────────── */
+
+/* Motion пише opacity и transform инлайн. На хартия елемент, който още не е
+   довършил появата си, би излязъл блед или изместен — затова се фиксира. */
+@media print {
+  [data-motion] {
+    opacity: 1 !important;
+    transform: none !important;
+    height: auto !important;
+  }
+  * { animation: none !important; transition: none !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

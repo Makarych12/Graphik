@@ -7,6 +7,7 @@ import { formatDateTimeBG, formatHours } from "@/lib/time";
 import type { Trip } from "@/lib/types";
 import TripEditor, { MODE_LABEL } from "@/components/trips/TripEditor";
 import ValidationPanel from "@/components/schedule/ValidationPanel";
+import { Reveal } from "@/components/motion";
 
 function newTrip(employeeId: string, year: number, month: number): Trip {
   const start = new Date(year, month - 1, new Date().getDate() <= 28 ? new Date().getDate() : 1, 6, 0);
@@ -74,16 +75,16 @@ export default function ReisovePage() {
       )}
 
       <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))" }}>
-        {sorted.map((t) => {
+        {sorted.map((t, i) => {
           const c = calcTrip(t, settings);
           const emp = employees.find((e) => e.id === t.employeeId);
           const errs = vByTrip.get(t.id) ?? 0;
           return (
+            <Reveal key={t.id} delay={Math.min(i, 8) * 0.02}>
             <button
-              key={t.id}
               className="card"
               style={{
-                padding: 10, textAlign: "left", cursor: "pointer", font: "inherit", color: "var(--text)",
+                width: "100%", padding: 10, textAlign: "left", cursor: "pointer", font: "inherit", color: "var(--text)",
                 borderColor: errs ? "var(--error)" : "var(--border)", borderWidth: errs ? 2 : 1.5,
               }}
               onClick={() => setEditing(t.id)}
@@ -105,6 +106,7 @@ export default function ReisovePage() {
                 <span style={{ marginLeft: "auto" }}>раб. <b className="num" style={{ color: "var(--text)" }}>{formatHours(c.workHours)}</b> ч.</span>
               </div>
             </button>
+            </Reveal>
           );
         })}
       </div>

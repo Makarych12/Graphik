@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Employee, Violation } from "@/lib/types";
 import { SeverityDot } from "@/components/ui";
+import { AnimatePresence, Collapse, ListItem } from "@/components/motion";
 
 export default function ValidationPanel({
   violations,
@@ -56,16 +57,17 @@ export default function ValidationPanel({
         </div>
       </div>
 
-      {open && (
+      <Collapse open={open}>
         <div className="scroll-y" style={{ maxHeight: 260 }}>
           {shown.length === 0 && (
             <div style={{ padding: 14, color: "var(--text-dim)", fontSize: 13 }}>
               Няма записи по този филтър.
             </div>
           )}
+          <AnimatePresence initial={false}>
           {shown.map((v) => (
+            <ListItem key={v.id}>
             <button
-              key={v.id}
               className="hairline"
               style={{
                 display: "flex", gap: 8, width: "100%", textAlign: "left", padding: "8px 12px",
@@ -84,9 +86,11 @@ export default function ValidationPanel({
                 <span style={{ display: "block", fontSize: 13, marginTop: 2 }}>{v.message}</span>
               </span>
             </button>
+            </ListItem>
           ))}
+          </AnimatePresence>
         </div>
-      )}
+      </Collapse>
     </div>
   );
 }

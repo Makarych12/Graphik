@@ -1,6 +1,7 @@
 "use client";
 
 import { useApp } from "@/lib/store";
+import Dropdown from "@/components/Dropdown";
 import { Field } from "@/components/ui";
 import type { ShiftPattern } from "@/lib/types";
 import { PATTERN_LABEL, defaultPattern, patternMonth } from "@/lib/patterns";
@@ -30,23 +31,20 @@ export default function PatternEditor({
   return (
     <div style={{ gridColumn: "1 / -1", display: "grid", gap: 8 }}>
       <Field label="Базов шаблон на смените">
-        <select
-          className="select"
+        <Dropdown
           value={kind}
-          onChange={(e) =>
+          ariaLabel="Базов шаблон на смените"
+          options={(Object.keys(PATTERN_LABEL) as ShiftPattern["kind"][]).map((k) => ({ value: k, label: PATTERN_LABEL[k] }))}
+          onChange={(v) =>
             onChange(
               defaultPattern(
-                e.target.value as ShiftPattern["kind"],
+                v as ShiftPattern["kind"],
                 settings,
                 `${year}-${String(month).padStart(2, "0")}-01`,
               ),
             )
           }
-        >
-          {(Object.keys(PATTERN_LABEL) as ShiftPattern["kind"][]).map((k) => (
-            <option key={k} value={k}>{PATTERN_LABEL[k]}</option>
-          ))}
-        </select>
+        />
       </Field>
 
       {pattern?.kind === "cycle2x2" && (
@@ -100,15 +98,12 @@ export default function PatternEditor({
 
       {pattern?.kind === "weekdays" && (
         <Field label="Код на редовната смяна" hint="Понеделник–петък; събота и неделя са почивни.">
-          <select
-            className="select num"
+          <Dropdown
             value={pattern.codeId}
-            onChange={(e) => onChange({ ...pattern, codeId: e.target.value })}
-          >
-            {workCodes.map((c) => (
-              <option key={c.id} value={c.id}>{c.code} — {c.label}</option>
-            ))}
-          </select>
+            ariaLabel="Код на редовната смяна"
+            options={workCodes.map((c) => ({ value: c.id, label: `${c.code} — ${c.label}` }))}
+            onChange={(v) => onChange({ ...pattern, codeId: v })}
+          />
         </Field>
       )}
 

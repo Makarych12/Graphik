@@ -5,6 +5,7 @@ import { useApp } from "@/lib/store";
 import type { Trip, TripMode } from "@/lib/types";
 import { calcTrip, nextAllowedYavka } from "@/lib/trips";
 import { formatDateTimeBG, formatHours, fromLocalInput, toLocalInput } from "@/lib/time";
+import Dropdown from "@/components/Dropdown";
 
 const MODE_LABEL: Record<TripMode, string> = {
   named: "Именен график",
@@ -24,14 +25,20 @@ export default function TripEditor({ trip, onClose }: { trip: Trip; onClose: () 
     <Modal open onClose={onClose} wide title="Повеска">
       <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))" }}>
         <Field label="Служител">
-          <select className="select" value={trip.employeeId} onChange={(e) => set({ employeeId: e.target.value })}>
-            {employees.map((e) => <option key={e.id} value={e.id}>{e.name || e.serviceNo || "без име"}</option>)}
-          </select>
+          <Dropdown
+            value={trip.employeeId}
+            ariaLabel="Служител"
+            options={employees.map((e) => ({ value: e.id, label: e.name || e.serviceNo || "без име" }))}
+            onChange={(v) => set({ employeeId: v })}
+          />
         </Field>
         <Field label="Режим на назначение">
-          <select className="select" value={trip.mode} onChange={(e) => set({ mode: e.target.value as TripMode })}>
-            {(Object.keys(MODE_LABEL) as TripMode[]).map((m) => <option key={m} value={m}>{MODE_LABEL[m]}</option>)}
-          </select>
+          <Dropdown
+            value={trip.mode}
+            ariaLabel="Режим на назначение"
+            options={(Object.keys(MODE_LABEL) as TripMode[]).map((m) => ({ value: m, label: MODE_LABEL[m] }))}
+            onChange={(v) => set({ mode: v as TripMode })}
+          />
         </Field>
         <Field label="Маршрут">
           <input className="input" value={trip.route ?? ""} onChange={(e) => set({ route: e.target.value })} placeholder="напр. Г. Оряховица – Варна" />

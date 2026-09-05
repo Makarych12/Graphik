@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useApp } from "@/lib/store";
+import { Swap, motion, AnimatePresence } from "@/components/motion";
 import type { Settings } from "@/lib/types";
 import { MONTHS_BG } from "@/lib/time";
 import * as db from "@/lib/db";
@@ -85,8 +86,17 @@ function MonthPicker() {
         {MONTHS_BG[month - 1]} {year}
       </button>
       <button className="btn btn-sm btn-icon" onClick={() => step(1)} title="Следващ месец">›</button>
+      <AnimatePresence>
       {open && (
-        <div className="card" style={{ position: "absolute", top: "110%", right: 0, zIndex: 40, minWidth: 200, maxHeight: 320, overflowY: "auto", padding: 6 }}>
+        <motion.div
+          data-motion
+          className="card"
+          initial={{ opacity: 0, y: -6, scaleY: 0.96 }}
+          animate={{ opacity: 1, y: 0, scaleY: 1 }}
+          exit={{ opacity: 0, y: -6, scaleY: 0.96 }}
+          transition={{ duration: 0.16, ease: [0.22, 0.61, 0.36, 1] }}
+          style={{ position: "absolute", top: "110%", right: 0, zIndex: 40, minWidth: 200, maxHeight: 320, overflowY: "auto", padding: 6, transformOrigin: "top", boxShadow: "var(--shadow-pop)" }}
+        >
           <div className="ui-label" style={{ padding: "4px 6px" }}>Запазени месеци</div>
           {months.length === 0 && <div style={{ padding: 8, color: "var(--text-dim)", fontSize: 13 }}>Няма запазени.</div>}
           {months.map((id) => {
@@ -102,8 +112,9 @@ function MonthPicker() {
               </button>
             );
           })}
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -180,7 +191,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <main style={{ flex: 1, padding: "16px 14px 28px" }}>
-        {ready ? children : <div style={{ padding: 24, color: "var(--text-dim)" }}>Зареждане…</div>}
+        {ready ? (
+          <Swap id={pathname}>{children}</Swap>
+        ) : (
+          <div style={{ padding: 24, color: "var(--text-dim)" }}>Зареждане…</div>
+        )}
       </main>
     </div>
   );

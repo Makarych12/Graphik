@@ -5,6 +5,7 @@ import { useApp } from "@/lib/store";
 import * as db from "@/lib/db";
 import type { ScheduleStatus } from "@/lib/types";
 import MonthRoster from "./MonthRoster";
+import Dropdown from "@/components/Dropdown";
 
 const STATUS_LABEL: Record<ScheduleStatus, string> = {
   draft: "Чернова",
@@ -51,16 +52,13 @@ export default function Toolbar({ onToggleAI, aiOpen }: { onToggleAI: () => void
     <div className="no-print" style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
       <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
         <span className="ui-label">Статус</span>
-        <select
-          className="select"
-          style={{ width: "auto", minWidth: 160 }}
+        <Dropdown
+          style={{ width: "auto", minWidth: 170 }}
           value={schedule.status}
-          onChange={(e) => setStatus(e.target.value as ScheduleStatus)}
-        >
-          {(Object.keys(STATUS_LABEL) as ScheduleStatus[]).map((s) => (
-            <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-          ))}
-        </select>
+          ariaLabel="Статус на графика"
+          options={(Object.keys(STATUS_LABEL) as ScheduleStatus[]).map((s) => ({ value: s, label: STATUS_LABEL[s] }))}
+          onChange={(v) => setStatus(v as ScheduleStatus)}
+        />
       </div>
 
       <button

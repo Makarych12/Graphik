@@ -8,6 +8,8 @@ import type { ShiftCode, CodeCategory, Settings } from "@/lib/types";
 import { breaksMinutes, spanMinutes } from "@/lib/time";
 import * as db from "@/lib/db";
 import Holidays from "@/components/settings/Holidays";
+import Dropdown from "@/components/Dropdown";
+import { Reveal, Swap, Collapse } from "@/components/motion";
 import RosterSection from "@/components/settings/RosterSection";
 
 const CATEGORY_LABEL: Record<CodeCategory, string> = {
@@ -25,13 +27,13 @@ const THEME_LABEL: Record<Settings["theme"], string> = {
   system: "Като системата",
 };
 
-function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+function Section({ title, hint, children, delay = 0 }: { title: string; hint?: string; children: React.ReactNode; delay?: number }) {
   return (
-    <section className="card" style={{ padding: 16 }}>
+    <Reveal delay={delay} className="card" style={{ padding: 16 }}>
       <h2 style={{ fontSize: 15.5, fontWeight: 700, margin: 0, letterSpacing: "-0.015em" }}>{title}</h2>
       {hint && <p style={{ fontSize: 12.5, color: "var(--text-dim)", margin: "5px 0 12px", maxWidth: 720 }}>{hint}</p>}
       <div style={{ marginTop: hint ? 0 : 12 }}>{children}</div>
-    </section>
+    </Reveal>
   );
 }
 
@@ -73,12 +75,14 @@ function CodeRow({ code, onChange, onDelete }: { code: ShiftCode; onChange: (c: 
         </div>
       )}
 
-      {open && (
+      <Collapse open={open}>
         <div style={{ marginTop: 8, display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
           <Field label="Категория">
-            <select className="select" value={code.category} onChange={(e) => onChange({ ...code, category: e.target.value as CodeCategory })}>
-              {(Object.keys(CATEGORY_LABEL) as CodeCategory[]).map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
-            </select>
+            <Dropdown
+              value={code.category}
+              options={(Object.keys(CATEGORY_LABEL) as CodeCategory[]).map((c) => ({ value: c, label: CATEGORY_LABEL[c] }))}
+              onChange={(v) => onChange({ ...code, category: v as CodeCategory })}
+            />
           </Field>
           <Field label="Цвят">
             <input className="input" type="color" style={{ padding: 2, height: 40 }} value={code.color} onChange={(e) => onChange({ ...code, color: e.target.value })} />
@@ -91,11 +95,15 @@ function CodeRow({ code, onChange, onDelete }: { code: ShiftCode; onChange: (c: 
                   onChange={(e) => onChange({ ...code, breaks: code.breaks.map((x, j) => j === i ? { ...x, start: e.target.value } : x) })} />
                 <input className="input num" style={{ width: 96 }} type="time" value={b.end}
                   onChange={(e) => onChange({ ...code, breaks: code.breaks.map((x, j) => j === i ? { ...x, end: e.target.value } : x) })} />
-                <select className="select" style={{ width: "auto", minWidth: 200 }} value={b.kind}
-                  onChange={(e) => onChange({ ...code, breaks: code.breaks.map((x, j) => j === i ? { ...x, kind: e.target.value as "pochivka" | "prekasvane" } : x) })}>
-                  <option value="pochivka">Почивка вътре в смяната</option>
-                  <option value="prekasvane">Прекъсване на работния ден (чл.8)</option>
-                </select>
+                <Dropdown
+                  style={{ width: "auto", minWidth: 240 }}
+                  value={b.kind}
+                  options={[
+                    { value: "pochivka", label: "Почивка вътре в смяната" },
+                    { value: "prekasvane", label: "Прекъсване на работния ден (чл.8)" },
+                  ]}
+                  onChange={(v) => onChange({ ...code, breaks: code.breaks.map((x, j) => j === i ? { ...x, kind: v as "pochivka" | "prekasvane" } : x) })}
+                />
                 <button className="btn btn-sm btn-danger" onClick={() => onChange({ ...code, breaks: code.breaks.filter((_, j) => j !== i) })}>✕</button>
               </div>
             ))}
@@ -111,7 +119,7 @@ function CodeRow({ code, onChange, onDelete }: { code: ShiftCode; onChange: (c: 
             <button className="btn btn-sm btn-danger" onClick={onDelete}>Изтрий кода</button>
           </div>
         </div>
-      )}
+      </Collapse>
     </div>
   );
 }
@@ -186,6 +194,7 @@ export default function SettingsPage() {
         ))}
       </div>
 
+      <Swap id={tab}>
       {tab === "sluzhiteli" && (
         <Section
           title="Служители"
@@ -196,18 +205,18 @@ export default function SettingsPage() {
       )}
 
       {tab === "obshti" && (
-      <>
+      <div style={{ display: "grid", gap: 12 }}>
       <Section
         title="Интерфейс"
         hint="Езикът на приложението е български по задание — термините идват дословно от бланка на депото и от Наредба № 50, затова не се превеждат."
       >
         <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))" }}>
           <Field label="Тема">
-            <select className="select" value={gen.theme} onChange={(e) => setDraft({ theme: e.target.value as Settings["theme"] })}>
-              {(Object.keys(THEME_LABEL) as Settings["theme"][]).map((t) => (
-                <option key={t} value={t}>{THEME_LABEL[t]}</option>
-              ))}
-            </select>
+            <Dropdown
+              value={gen.theme}
+              options={(Object.keys(THEME_LABEL) as Settings["theme"][]).map((t) => ({ value: t, label: THEME_LABEL[t] }))}
+              onChange={(v) => setDraft({ theme: v as Settings["theme"] })}
+            />
           </Field>
           <Field label="Език на интерфейса">
             <input className="input" value="Български" readOnly disabled />
@@ -364,8 +373,9 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
-      </>
+      </div>
       )}
+      </Swap>
     </div>
   );
 }
