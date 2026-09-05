@@ -14,6 +14,21 @@ import PatchPreview from "@/components/ai/PatchPreview";
 import { validateSchedule } from "@/lib/validation";
 import { Reveal, Swap } from "@/components/motion";
 
+/**
+ * Плътност на печатния бланк според състава.
+ *
+ * Полезната височина на A4 landscape при поле 8 mm е 194 mm ≈ 733 px. Редът,
+ * шрифтът и вертикалната шапка на итоговите колони се свиват на стъпки, за да
+ * се съберат мрежата, легендата и подписите на един лист. Бригадата обикновено
+ * е 19–23 души — този обхват трябва да изглежда спокойно, а не притиснато.
+ */
+function printDensity(n: number): "roomy" | "normal" | "dense" | "tight" {
+  if (n <= 16) return "roomy";
+  if (n <= 20) return "normal";
+  if (n <= 24) return "dense";
+  return "tight";
+}
+
 export default function SmeniPage() {
   const { settings, employees, pendingPatch } = useApp();
   const schedule = useResolved();
@@ -37,7 +52,7 @@ export default function SmeniPage() {
 
   return (
     <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ flex: 1, minWidth: 0 }} data-print-density={printDensity(employees.length)}>
         <Toolbar onToggleAI={() => setAi(!ai)} aiOpen={ai} />
 
         {/* Шапката и мрежата се сменят заедно при смяна на месеца — плъзгат се

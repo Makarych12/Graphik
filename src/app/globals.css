@@ -672,14 +672,14 @@ a { color: var(--accent-text); }
      поравно между дните, защото те нямат зададена ширина. */
   .c-serv { width: 2.4%;  min-width: 0; }
   .c-name { width: 12.6%; min-width: 0; }
-  .c-pos  { width: 7.3%;  min-width: 0; }
+  .c-pos  { width: 7.9%;  min-width: 0; }
   .c-do   { width: 3.3%;  min-width: 0; }
   .c-wd   { width: 3.1%;  min-width: 0; }
-  .c-rest { width: 4.2%;  min-width: 0; }
+  .c-rest { width: 4.0%;  min-width: 0; }
   .badge-do { display: none; }
   .day-cell { width: auto; min-width: 0; }
   .day-cell .code { font-size: 7.5px; }
-  .totals-cell { width: 3.4%; min-width: 0; padding: 0 2px; }
+  .totals-cell { width: 3.3%; min-width: 0; padding: 0 2px; }
   .r-total { width: 3.9%; min-width: 0; }
   .r-diff  { width: 3.9%; min-width: 0; }
   .r-carry { width: 3.9%; min-width: 0; }
@@ -704,20 +704,21 @@ a { color: var(--accent-text); }
    се събере целият бланк на един лист заедно с мрежата и подписите.
    Правилото стои след тясноекранното, за да го изпревари при печат. */
 @media print {
-  .legend { padding: 6px 8px 7px; }
-  .legend-title { margin-bottom: 5px; }
+  .legend { padding: 4px 7px 5px; }
+  .legend-title { margin-bottom: 3px; font-size: 7px; }
   .legend-groups { grid-template-columns: 1.55fr 1fr !important; gap: 6px; }
   .legend-card {
-    padding: 5px 7px;
+    padding: 4px 6px;
     background: #fafafa !important;
-    border: 0.5px solid #000 !important;
+    border: 1px solid #000 !important;
   }
   .legend-card-title {
     font-size: 6.5px;
-    padding-bottom: 3px;
-    margin-bottom: 2px;
-    border-bottom: 0.5px solid #999;
+    padding-bottom: 2px;
+    margin-bottom: 1px;
+    border-bottom: 1px solid #bbb;
   }
+  .legend-note { font-size: 6.5px; }
   .legend-split { gap: 12px; }
   .legend-table { font-size: 7px; }
   .legend-table th { font-size: 6px; padding: 0 5px 2px 0; }
@@ -839,4 +840,75 @@ a { color: var(--accent-text); }
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ── Побиране на бланката в един лист (D.8.2) ───────────────────────────── */
+
+/* Полезната височина на A4 landscape при поле 8 mm е 194 mm ≈ 733 px. Съставът
+   на бригадата обикновено е 19–23 души, но се среща и повече, затова редът,
+   шрифтът и вертикалната шапка се свиват на стъпки според броя редове.
+   Степента се задава от страницата чрез data-print-density. */
+@media print {
+  [data-print-density] { --row-h: 18px; }
+  [data-print-density] table.sched-grid { font-size: 8px; }
+  [data-print-density] table.sched-grid thead th.totals-cell { height: 96px; }
+
+  [data-print-density="normal"] { --row-h: 16px; }
+  [data-print-density="normal"] table.sched-grid { font-size: 7.5px; }
+  [data-print-density="normal"] table.sched-grid td { font-size: 7.5px !important; }
+  [data-print-density="normal"] table.sched-grid td.c-name .btn { font-size: 7.5px !important; }
+  [data-print-density="normal"] table.sched-grid thead th.totals-cell { height: 86px; }
+
+  [data-print-density="dense"] { --row-h: 14px; }
+  [data-print-density="dense"] table.sched-grid { font-size: 7px; }
+  [data-print-density="dense"] table.sched-grid td { font-size: 7px !important; }
+  [data-print-density="dense"] table.sched-grid td.c-name .btn { font-size: 7px !important; }
+  [data-print-density="dense"] table.sched-grid td.c-pos { font-size: 6.5px !important; }
+  [data-print-density="dense"] table.sched-grid .totals-cell { font-size: 6.5px !important; }
+  [data-print-density="dense"] table.sched-grid thead th { font-size: 6.5px; }
+  [data-print-density="dense"] table.sched-grid thead th.totals-cell { height: 78px; font-size: 6px; }
+  [data-print-density="dense"] .day-cell .code { font-size: 7px; }
+
+  [data-print-density="tight"] { --row-h: 12px; }
+  [data-print-density="tight"] table.sched-grid { font-size: 6.5px; }
+  [data-print-density="tight"] table.sched-grid td { font-size: 6.5px !important; }
+  [data-print-density="tight"] table.sched-grid td.c-name .btn { font-size: 6.5px !important; }
+  [data-print-density="tight"] table.sched-grid td.c-pos { font-size: 6px !important; }
+  [data-print-density="tight"] table.sched-grid .totals-cell { font-size: 6px !important; }
+  [data-print-density="tight"] table.sched-grid thead th { font-size: 6px; }
+  [data-print-density="tight"] table.sched-grid thead th.totals-cell { height: 70px; font-size: 5.5px; }
+  [data-print-density="tight"] .day-cell .code { font-size: 6.5px; }
+
+  /* При голям състав легендата отстъпва още височина. */
+  [data-print-density="dense"] .legend,
+  [data-print-density="tight"] .legend { padding: 3px 6px 4px; }
+  [data-print-density="dense"] .legend-table,
+  [data-print-density="tight"] .legend-table { font-size: 6.5px; }
+  [data-print-density="dense"] .legend-table td,
+  [data-print-density="tight"] .legend-table td { padding: 0 5px 0 0; }
+  [data-print-density="dense"] .legend-holiday,
+  [data-print-density="tight"] .legend-holiday { font-size: 6.5px; padding: 2px 5px; margin-top: 3px; }
+  [data-print-density="dense"] .signatures,
+  [data-print-density="tight"] .signatures { margin-top: 6px !important; }
+
+  /* Шапката на документа и подписите отстъпват вертикално място на мрежата. */
+  .doc-header { padding: 6px 9px !important; margin-bottom: 5px !important; }
+  .doc-header h1 { font-size: 11px !important; margin: 2px 0 1px !important; }
+  .doc-header div { font-size: 7.5px !important; }
+  .doc-header .ui-label { font-size: 6px !important; }
+  .doc-header .doc-figure { font-size: 13px !important; }
+  .signatures { margin-top: 8px !important; gap: 16px !important; }
+  .signatures .sig-line { height: 14px !important; }
+  .signatures .ui-label { font-size: 6px !important; }
+  .signatures div { font-size: 7px !important; }
+
+  /* Легендата се притиска към мрежата. */
+  .legend { margin-top: 5px !important; }
+  .legend-holiday { margin-top: 4px; padding: 3px 6px; }
+
+  /* Ако съставът все пак не се събере, преломът минава между редовете, а
+     заглавният ред на мрежата се повтаря на всеки лист. */
+  table.sched-grid thead { display: table-header-group; }
+  table.sched-grid tbody tr { break-inside: avoid; page-break-inside: avoid; }
+  .legend, .signatures { break-inside: avoid; page-break-inside: avoid; }
 }

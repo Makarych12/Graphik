@@ -22,7 +22,7 @@ export default function DocumentHeader() {
   const normMatches = Math.abs(h.normHours - calendarDays * 8) < 0.01;
 
   return (
-    <div className="card" style={{ padding: 12, marginBottom: 10 }}>
+    <div className="card doc-header" style={{ padding: 12, marginBottom: 10 }}>
       <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
         <div style={{ flex: "1 1 320px", minWidth: 0 }}>
           <div style={{ fontSize: 12, color: "var(--text-dim)", fontWeight: 700 }}>{h.organization}</div>
@@ -38,11 +38,11 @@ export default function DocumentHeader() {
         <div style={{ display: "flex", gap: 10 }}>
           <div style={{ textAlign: "right" }}>
             <div className="ui-label">Норма /часове/</div>
-            <div className="num" style={{ fontSize: 22, fontWeight: 800 }}>{formatHours(h.normHours, 0)}</div>
+            <div className="num doc-figure" style={{ fontSize: 22, fontWeight: 800 }}>{formatHours(h.normHours, 0)}</div>
           </div>
           <div style={{ textAlign: "right" }}>
             <div className="ui-label">Работни дни по календар</div>
-            <div className="num" style={{ fontSize: 22, fontWeight: 800, color: "var(--text-dim)" }}>{calendarDays}</div>
+            <div className="num doc-figure" style={{ fontSize: 22, fontWeight: 800, color: "var(--text-dim)" }}>{calendarDays}</div>
             <div style={{ fontSize: 10, color: "var(--text-faint)", maxWidth: 150 }}>
               справка; фактическите дни са на реда на всеки служител
             </div>
@@ -113,11 +113,11 @@ export function SignatureBlock() {
     { label: "Утвърдил", p: h.approvedBy },
   ];
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 24, marginTop: 18 }}>
+    <div className="signatures" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 24, marginTop: 18 }}>
       {rows.map((r) => (
         <div key={r.label}>
           <div className="ui-label">{r.label}:</div>
-          <div style={{ borderBottom: "1.5px solid var(--border-strong)", height: 28 }} />
+          <div className="sig-line" style={{ borderBottom: "1.5px solid var(--border-strong)", height: 28 }} />
           <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 3 }}>
             {r.p.name || "………………………"} — {r.p.position || "………………"}
           </div>

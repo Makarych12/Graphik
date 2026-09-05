@@ -43,6 +43,29 @@ function ShiftTable({ codes }: { codes: ShiftCode[] }) {
   );
 }
 
+/** Отсъствията нямат време и часове — само код и разшифровка. */
+function AbsenceTable({ codes }: { codes: ShiftCode[] }) {
+  if (!codes.length) return null;
+  return (
+    <table className="legend-table">
+      <thead>
+        <tr>
+          <th className="lc-code">Код</th>
+          <th>Наименование</th>
+        </tr>
+      </thead>
+      <tbody>
+        {codes.map((c) => (
+          <tr key={c.id}>
+            <td className="lc-code"><Code code={c} /></td>
+            <td className="lc-name">{c.label}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 /**
  * Легенда на кодовете — на екрана и в печатния бланк (C.3).
  *
@@ -56,6 +79,7 @@ export default function Legend() {
   const shifts = codes.filter((c) => c.category === "work" || c.category === "other");
   const absences = codes.filter((c) => c.category !== "work" && c.category !== "other");
   const half = Math.ceil(shifts.length / 2);
+  const absHalf = Math.ceil(absences.length / 2);
 
   return (
     <section className="card legend">
@@ -72,22 +96,10 @@ export default function Legend() {
 
         <div className="legend-card">
           <div className="legend-card-title">Отсъствия и командировка</div>
-          <table className="legend-table">
-            <thead>
-              <tr>
-                <th className="lc-code">Код</th>
-                <th>Наименование</th>
-              </tr>
-            </thead>
-            <tbody>
-              {absences.map((c) => (
-                <tr key={c.id}>
-                  <td className="lc-code"><Code code={c} /></td>
-                  <td className="lc-name">{c.label}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="legend-split">
+            <AbsenceTable codes={absences.slice(0, absHalf)} />
+            <AbsenceTable codes={absences.slice(absHalf)} />
+          </div>
         </div>
       </div>
 
