@@ -13,18 +13,49 @@ function Code({ code }: { code: ShiftCode }) {
   );
 }
 
+/** Колонките са по съдържание — иначе между името и часовете зее празно поле. */
+function ShiftTable({ codes }: { codes: ShiftCode[] }) {
+  return (
+    <table className="legend-table">
+      <thead>
+        <tr>
+          <th className="lc-code">Код</th>
+          <th>Наименование</th>
+          <th className="lc-time">Време</th>
+          <th className="lc-hours" title="Отчетни часове на смяната">Часа</th>
+        </tr>
+      </thead>
+      <tbody>
+        {codes.map((c) => (
+          <tr key={c.id}>
+            <td className="lc-code"><Code code={c} /></td>
+            <td className="lc-name">{c.label}</td>
+            <td className="lc-time num legend-time">
+              {c.start && c.end ? `${c.start}–${c.end}` : "—"}
+            </td>
+            <td className="lc-hours num legend-hours">
+              {c.hours ? formatHours(c.hours, 0) : "—"}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 /**
  * Легенда на кодовете — на екрана и в печатния бланк (C.3).
  *
- * Двете групи са отделни блокове със свое заглавие, а вътре всяка е таблица:
- * код / наименование / време / часове стоят в общи колони, за да се четат
- * отгоре надолу. Бележката за празниците е отделена като акцент, защото от нея
- * зависи заплащането (чл.264 КТ), а не е пояснение под черта.
+ * Смените са разделени на две колони, за да не расте височината, а колонките
+ * са по съдържание, не разтеглени по ширината на листа. Бележката за
+ * празниците е отделена като акцент, защото от нея зависи заплащането
+ * (чл.264 КТ), а не е пояснение под черта.
  */
 export default function Legend() {
   const codes = useApp((s) => s.settings.codes);
   const shifts = codes.filter((c) => c.category === "work" || c.category === "other");
   const absences = codes.filter((c) => c.category !== "work" && c.category !== "other");
+  const half = Math.ceil(shifts.length / 2);
 
   return (
     <section className="card legend">
@@ -33,30 +64,10 @@ export default function Legend() {
       <div className="legend-groups">
         <div className="legend-card">
           <div className="legend-card-title">Кодове на смените</div>
-          <table className="legend-table">
-            <thead>
-              <tr>
-                <th className="lc-code">Код</th>
-                <th>Наименование</th>
-                <th className="lc-time">Време</th>
-                <th className="lc-hours">Часове</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shifts.map((c) => (
-                <tr key={c.id}>
-                  <td className="lc-code"><Code code={c} /></td>
-                  <td>{c.label}</td>
-                  <td className="lc-time num legend-time">
-                    {c.start && c.end ? `${c.start}–${c.end}` : "—"}
-                  </td>
-                  <td className="lc-hours num legend-hours">
-                    {c.hours ? formatHours(c.hours, 0) : "—"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="legend-split">
+            <ShiftTable codes={shifts.slice(0, half)} />
+            <ShiftTable codes={shifts.slice(half)} />
+          </div>
         </div>
 
         <div className="legend-card">
@@ -72,7 +83,7 @@ export default function Legend() {
               {absences.map((c) => (
                 <tr key={c.id}>
                   <td className="lc-code"><Code code={c} /></td>
-                  <td>{c.label}</td>
+                  <td className="lc-name">{c.label}</td>
                 </tr>
               ))}
             </tbody>

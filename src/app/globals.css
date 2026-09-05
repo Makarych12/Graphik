@@ -324,7 +324,13 @@ h1, h2, h3 { letter-spacing: -0.02em; }
   border-bottom: 1px solid var(--border);
 }
 
-.legend-table { width: 100%; border-collapse: collapse; font-size: 12.5px; table-layout: fixed; }
+/* Двете колони със смени една до друга — спестява половината височина. */
+.legend-split { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
+.legend-split > * { flex: 0 1 auto; min-width: 0; }
+
+/* Ширината е по съдържание: разтеглена на целия лист таблица оставя огромно
+   празно поле между наименованието и часовете. */
+.legend-table { width: auto; border-collapse: collapse; font-size: 12.5px; }
 .legend-table th {
   font-size: 9.5px;
   font-weight: 650;
@@ -343,11 +349,12 @@ h1, h2, h3 { letter-spacing: -0.02em; }
 }
 .legend-table tbody tr:first-child td { border-top: none; }
 
-/* Фиксирани колони: часовете застават една под друга, а не където свърши
-   името на смяната. */
-.lc-code  { width: 46px; }
-.lc-time  { width: 96px; text-align: right; padding-right: 10px !important; }
-.lc-hours { width: 46px; text-align: right; padding-right: 0 !important; }
+/* Колонките се държат в обща мрежа, но не се разтеглят: часовете застават
+   една под друга веднага след наименованието. */
+.lc-code  { width: 1%; white-space: nowrap; }
+.lc-name  { padding-right: 16px !important; }
+.lc-time  { width: 1%; text-align: right; padding-right: 12px !important; }
+.lc-hours { width: 1%; text-align: right; padding-right: 0 !important; }
 
 .legend-code {
   display: inline-flex;
@@ -508,7 +515,7 @@ tr.emp-row:hover td.day-cell.weekend { background: var(--surface-3); }
 /* ── Печат (D.8.2) ──────────────────────────────────────────────────────── */
 
 @media print {
-  @page { size: A4 landscape; margin: 6mm; }
+  @page { size: A4 landscape; margin: 8mm; }
 
   /* Печатът винаги е на светла палитра, независимо от темата на екрана. */
   :root, :root[data-theme="dark"], :root[data-theme="light"] {
@@ -535,7 +542,11 @@ tr.emp-row:hover td.day-cell.weekend { background: var(--surface-3); }
     --ok-soft: #ffffff;
   }
   :root { --row-h: 18px; --day-w: 16px; }
-  html, body { background: #fff; color: #000; font-size: 9px; }
+  html, body { background: #fff; color: #000; font-size: 9px; margin: 0; padding: 0; }
+  /* Отстъпите на екранния контейнер стесняват листа и избутват таблицата
+     извън печатната област. */
+  main { padding: 0 !important; }
+  body, main, .card, .grid-wrap { max-width: 100% !important; }
   .no-print { display: none !important; }
   .print-only { display: block !important; }
 
@@ -551,8 +562,30 @@ tr.emp-row:hover td.day-cell.weekend { background: var(--surface-3); }
     /* Слетите рамки не оставят двойни линии по границите на клетките. */
     border-collapse: collapse;
     border: 1px solid #000;
+    /* Фиксираната подредба разпределя точно ширината на листа. С автоматична
+       подредба колоните растат по съдържание, сборът им надхвърляше листа и
+       принтерът отрязваше десния край. */
+    table-layout: fixed;
   }
   table.sched-grid th, table.sched-grid td { border-color: #000 !important; background: #fff !important; }
+  /* Инлайн размерите от мрежата (12–13 px) надживяват печатния мащаб и правят
+     клетките по-широки от дела им — тук се уеднаквяват. */
+  table.sched-grid td { font-size: 8px !important; }
+  /* Името е бутон вътре в клетката и носи размера на .btn-sm (13 px) — на
+     хартия текстът не се побираше и се съкращаваше с многоточие. */
+  table.sched-grid td.c-name .btn {
+    font-size: 8px !important;
+    min-height: 0 !important;
+    line-height: var(--row-h);
+  }
+  table.sched-grid td.c-pos { font-size: 7.5px !important; }
+  table.sched-grid .totals-cell { font-size: 7px !important; }
+  /* Дългите единични думи в тесните числови колони („Полагаем“, „Работни“) не
+     бива да излизат извън клетката при нестандартни полета на принтера. */
+  table.sched-grid thead th.c-do, table.sched-grid thead th.c-wd {
+    font-size: 6px;
+    overflow-wrap: anywhere;
+  }
   /* Празничната колона остава залята и на хартия — иначе от нея не остава
      никакъв знак освен звездата в шапката. */
   table.sched-grid thead th.day-cell.holiday { background: #dcdcdc !important; }
@@ -628,18 +661,26 @@ a { color: var(--accent-text); }
    ширини по-долу е под нея и за месец с 31 дни, затова таблицата не прелива
    на втора страница, а `width: 100%` разпределя остатъка равномерно. */
 @media print {
-  .c-serv { width: 24px;  min-width: 24px; }
-  .c-name { width: 92px;  min-width: 92px; }
-  .c-pos  { width: 58px;  min-width: 58px; }
-  .c-do   { width: 24px;  min-width: 24px; }
-  .c-wd   { width: 26px;  min-width: 26px; }
-  .c-rest { width: 48px;  min-width: 48px; }
+  /* Всички ширини са дялове от листа, не пиксели: така бланката се побира и
+     при по-големи полета на принтера, и при 28, и при 31 дни в месеца.
+     Сборът на фиксираните колони е 51,1 %; останалите 48,9 % се разделят
+     поравно между дните, защото те нямат зададена ширина. */
+  .c-serv { width: 2.4%;  min-width: 0; }
+  .c-name { width: 12.6%; min-width: 0; }
+  .c-pos  { width: 7.3%;  min-width: 0; }
+  .c-do   { width: 3.3%;  min-width: 0; }
+  .c-wd   { width: 3.1%;  min-width: 0; }
+  .c-rest { width: 4.2%;  min-width: 0; }
   .badge-do { display: none; }
-  .day-cell { width: 16px; min-width: 16px; }
-  .totals-cell { min-width: 32px; padding: 0 2px; }
-  /* Трите крайни колони носят екранните си ширини (78/72/78 px) — в печата те
-     изяждат мястото на дните и итоговият блок се разминава с мрежата. */
-  .r-total, .r-diff, .r-carry { width: 42px; min-width: 42px; }
+  .day-cell { width: auto; min-width: 0; }
+  .day-cell .code { font-size: 7.5px; }
+  .totals-cell { width: 3.4%; min-width: 0; padding: 0 2px; }
+  .r-total { width: 3.9%; min-width: 0; }
+  .r-diff  { width: 3.9%; min-width: 0; }
+  .r-carry { width: 3.9%; min-width: 0; }
+  /* При фиксирана подредба съдържанието не бива да се излива в съседната
+     клетка, ако не се е побрало. */
+  table.sched-grid th, table.sched-grid td { overflow: hidden; }
   /* Вертикални заглавия на итоговите колони — както в хартиения бланк. */
   table.sched-grid thead th.totals-cell {
     writing-mode: vertical-rl;
@@ -672,19 +713,22 @@ a { color: var(--accent-text); }
     margin-bottom: 2px;
     border-bottom: 0.5px solid #999;
   }
+  .legend-split { gap: 12px; }
   .legend-table { font-size: 7px; }
-  .legend-table th { font-size: 6px; padding: 0 6px 2px 0; }
-  .legend-table td { padding: 0.5px 6px 0.5px 0; border-top: 0.5px solid #d5d5d5; }
-  .lc-code  { width: 34px; }
-  .lc-time  { width: 60px; padding-right: 7px !important; }
-  .lc-hours { width: 26px; }
+  .legend-table th { font-size: 6px; padding: 0 5px 2px 0; }
+  .legend-table td { padding: 0.5px 5px 0.5px 0; border-top: 1px solid #e0e0e0; }
+  .lc-name  { padding-right: 10px !important; }
+  .lc-time  { padding-right: 8px !important; }
+  /* Рамка от 0,5 px се закръгля различно по вертикала и по хоризонтала —
+     страничните ѝ ръбове излизаха като дебели черти до цифрата. На хартия
+     кодът се разпознава по цвета и по моноширинния шрифт, рамка не му трябва. */
   .legend-code {
-    min-width: 22px;
-    height: 10px;
-    padding: 0 3px;
-    font-size: 6.5px;
-    border-width: 0.5px;
-    background: #fff !important;
+    min-width: 0;
+    height: auto;
+    padding: 0;
+    font-size: 7.5px;
+    border: none !important;
+    background: transparent !important;
   }
   .legend-holiday {
     margin-top: 6px;
