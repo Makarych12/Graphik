@@ -1,0 +1,26 @@
+# Зависимости
+node_modules/
+
+# Сборка и кеш
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment: ключът на OpenRouter стои само в Environment Variables на
+# сървъра и никога не влиза в хранилището. Шаблонът .env.example е изключение —
+# той е празен и служи за документация.
+.env
+.env.*
+!.env.example
+
+# Деплой
+.vercel
+
+# ОС и редактори
+.DS_Store
+Thumbs.db
+*.swp
+*~

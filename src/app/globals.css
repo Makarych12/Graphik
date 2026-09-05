@@ -1,0 +1,698 @@
+@import "tailwindcss";
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Визуална система (D.9): работен инструмент на депото, не типово SaaS табло.
+   Плътна мрежа, висок контраст, моноширинни цифри, един акцентен цвят —
+   сигнално кехлибарено, по асоциация с ж.п. сигнализацията и перонните табла.
+
+   Всичко се строи от няколко жетона: повърхности, рамки, радиуси и три сенки.
+   Сенките подреждат пластовете (лист → карта → изскачащ прозорец) и не служат
+   за украса; контурите остават носещият елемент на йерархията.
+   ────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  color-scheme: light;
+
+  /* Повърхности — топло сиво като хартията на бланката, без синьо. */
+  --bg: #efeeea;
+  --surface: #ffffff;
+  --surface-2: #f7f6f3;
+  --surface-3: #eae8e3;
+  --border: #dcd9d2;
+  --border-strong: #a29e95;
+  --text: #15171b;
+  --text-dim: #575b63;
+  --text-faint: #878b93;
+
+  --accent: #e08600;
+  --accent-strong: #b96d00;
+  --accent-ink: #1a1206;
+  --accent-text: #8a5200;
+  --accent-soft: #fdf1dc;
+
+  --error: #c62828;
+  --error-soft: #fbe6e6;
+  --warn: #a86200;
+  --warn-soft: #fbf1dd;
+  --ok: #2e7d32;
+  --ok-soft: #e6f2e7;
+
+  /* Радиуси — една стълбица: контрола, карта, изскачащ прозорец. */
+  --r-sm: 6px;
+  --r-md: 9px;
+  --r-lg: 13px;
+
+  --shadow-1: 0 1px 2px rgb(20 22 26 / 0.05), 0 1px 1px rgb(20 22 26 / 0.04);
+  --shadow-2: 0 4px 14px rgb(20 22 26 / 0.08), 0 1px 3px rgb(20 22 26 / 0.06);
+  --shadow-pop: 0 14px 38px rgb(20 22 26 / 0.18), 0 2px 8px rgb(20 22 26 / 0.10);
+
+  --row-h: 30px;
+  --day-w: 32px;
+
+  --mono: ui-monospace, "JetBrains Mono", "SFMono-Regular", "Cascadia Mono",
+    Menlo, Consolas, "DejaVu Sans Mono", monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "DejaVu Sans", sans-serif;
+}
+
+/* Тъмната тема е самостоятелна палитра, а не осветлена наопаки: фонът е
+   студено графитено, повърхностите се вдигат на три стъпки, а кехлибареното
+   светва, за да остане сигнално върху тъмното. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0d0f13;
+  --surface: #15181d;
+  --surface-2: #1b1f26;
+  --surface-3: #232830;
+  --border: #2b313a;
+  --border-strong: #4d5560;
+  --text: #e9ecf1;
+  --text-dim: #a2aab6;
+  --text-faint: #737b88;
+
+  --accent: #ffb224;
+  --accent-strong: #ffc75c;
+  --accent-ink: #17120a;
+  --accent-text: #ffc033;
+  --accent-soft: #2a2113;
+
+  --error: #ff6b62;
+  --error-soft: #34201f;
+  --warn: #ffab30;
+  --warn-soft: #322613;
+  --ok: #5cc763;
+  --ok-soft: #162c1a;
+
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.5);
+  --shadow-2: 0 4px 16px rgb(0 0 0 / 0.55), 0 1px 3px rgb(0 0 0 / 0.4);
+  --shadow-pop: 0 16px 42px rgb(0 0 0 / 0.66), 0 2px 10px rgb(0 0 0 / 0.5);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: -0.006em;
+  margin: 0;
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 { letter-spacing: -0.02em; }
+
+/* Всички числови данни — моноширинни и таблични (D.9). */
+.num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Микрозаглавие над поле или група. Едно ниво под основния текст: с него се
+   надписва мрежата, а не се крещи. */
+.ui-label {
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* ── Контроли ───────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: var(--shadow-1);
+  transition: background 0.13s ease, border-color 0.13s ease, box-shadow 0.13s ease, transform 0.06s ease;
+}
+.btn:hover { background: var(--surface-2); border-color: var(--text-faint); }
+.btn:active { transform: translateY(1px); box-shadow: none; }
+.btn:disabled { opacity: 0.42; cursor: not-allowed; box-shadow: none; }
+.btn:disabled:hover { background: var(--surface); border-color: var(--border-strong); }
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent-strong);
+  color: var(--accent-ink);
+}
+.btn-primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+.btn-danger {
+  color: var(--error);
+  border-color: color-mix(in srgb, var(--error) 42%, var(--border));
+  background: var(--surface);
+}
+.btn-danger:hover { background: var(--error-soft); border-color: var(--error); }
+.btn-sm { min-height: 32px; padding: 0 11px; font-size: 13px; border-radius: var(--r-sm); }
+.btn-icon { min-height: 34px; width: 34px; padding: 0; }
+
+.input, .select, textarea.input {
+  width: 100%;
+  min-height: 38px;
+  padding: 7px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  transition: border-color 0.13s ease, background 0.13s ease;
+}
+.input:hover, .select:hover { border-color: var(--border-strong); }
+.input::placeholder { color: var(--text-faint); font-weight: 400; }
+.input:disabled, .select:disabled { background: var(--surface-2); color: var(--text-dim); }
+
+/* Падащият списък носи собствена стрелка — иначе изглежда като неоформена
+   браузърна контрола до останалите полета. */
+.select {
+  appearance: none;
+  padding-right: 30px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1.25 1.75 6 6.25l4.75-4.5' stroke='%23575b63' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+:root[data-theme="dark"] .select {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1.25 1.75 6 6.25l4.75-4.5' stroke='%23a2aab6' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
+
+/* Фокусът се очертава с ЕДИН контур. По-рано правилото едновременно
+   пребоядисваше рамката в кехлибарено и рисуваше outline с отстъп 1 px —
+   получаваха се два концентрични пръстена около едно и също поле.
+   Отрицателният отстъп слага контура точно върху рамката. */
+.input:focus, .select:focus, .btn:focus-visible, textarea.input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.input.num, .select.num { font-family: var(--mono); }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-1);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.chip-error { color: var(--error); border-color: color-mix(in srgb, var(--error) 40%, transparent); background: var(--error-soft); }
+.chip-warn  { color: var(--warn);  border-color: color-mix(in srgb, var(--warn) 40%, transparent);  background: var(--warn-soft); }
+.chip-ok    { color: var(--ok);    border-color: color-mix(in srgb, var(--ok) 40%, transparent);    background: var(--ok-soft); }
+.chip-accent{ color: var(--accent-text); border-color: color-mix(in srgb, var(--accent) 45%, transparent); background: var(--accent-soft); }
+
+/* ── Лента на приложението ──────────────────────────────────────────────── */
+
+.app-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  flex-wrap: wrap;
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Разделите са един сегментен превключвател, а не редица отделни бутони. */
+.nav {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: var(--r-sm);
+  color: var(--text-dim);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.13s ease, color 0.13s ease;
+}
+.nav-link:hover { background: var(--surface-3); color: var(--text); }
+.nav-link.is-active {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--shadow-1);
+}
+.nav-link.is-active:hover { background: var(--accent); color: var(--accent-ink); }
+
+/* Сегментен превключвател — ползва се и за разделите в „Настройки“. */
+.tabs { display: inline-flex; gap: 2px; padding: 3px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-md); }
+.tab {
+  min-height: 34px;
+  padding: 0 16px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.13s ease, color 0.13s ease;
+}
+.tab:hover { background: var(--surface-3); color: var(--text); }
+.tab[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-1); }
+.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* ── Легенда на кодовете ────────────────────────────────────────────────── */
+
+.legend { margin-top: 10px; padding: 12px 14px 13px; }
+.legend-title { display: block; margin-bottom: 9px; }
+
+.legend-groups {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+/* Всяка група е самостоятелен блок със заглавие и лека заливка — така двете
+   таблици не се четат като една обща простиня. */
+.legend-card {
+  min-width: 0;
+  padding: 9px 11px 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.legend-card-title {
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.legend-table { width: 100%; border-collapse: collapse; font-size: 12.5px; table-layout: fixed; }
+.legend-table th {
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  text-align: left;
+  padding: 0 8px 4px 0;
+}
+.legend-table td {
+  padding: 2.5px 8px 2.5px 0;
+  border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.legend-table tbody tr:first-child td { border-top: none; }
+
+/* Фиксирани колони: часовете застават една под друга, а не където свърши
+   името на смяната. */
+.lc-code  { width: 46px; }
+.lc-time  { width: 96px; text-align: right; padding-right: 10px !important; }
+.lc-hours { width: 46px; text-align: right; padding-right: 0 !important; }
+
+.legend-code {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--r-sm);
+  border: 1px solid color-mix(in srgb, var(--code-color) 55%, transparent);
+  background: color-mix(in srgb, var(--code-color) 16%, var(--surface));
+  color: var(--code-color);
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 11.5px;
+}
+/* Цветовете на кодовете са подбрани за светъл фон — тъмните (напр. графитеното
+   на редовната смяна) изчезват върху тъмната тема, затова там се изсветляват. */
+:root[data-theme="dark"] .legend-code {
+  color: color-mix(in srgb, var(--code-color) 55%, #ffffff);
+  border-color: color-mix(in srgb, var(--code-color) 60%, var(--border-strong));
+  background: color-mix(in srgb, var(--code-color) 24%, var(--surface));
+}
+.legend-time { color: var(--text-dim); }
+.legend-hours { font-weight: 700; }
+
+/* Празникът е правило за заплащане, не бележка под черта. */
+.legend-holiday {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  margin-top: 10px;
+  padding: 8px 11px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+  font-size: 12px;
+  color: var(--text);
+}
+.legend-holiday-star {
+  color: var(--accent-text);
+  font-size: 14px;
+  line-height: 1.1;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 860px) {
+  .legend-groups { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ── Мрежа на графика ───────────────────────────────────────────────────── */
+
+.grid-wrap {
+  overflow: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  max-width: 100%;
+}
+
+table.sched-grid {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+table.sched-grid th, table.sched-grid td {
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 0;
+  height: var(--row-h);
+  background: var(--surface);
+}
+table.sched-grid thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--surface-3);
+  border-bottom: 2px solid var(--border-strong);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-align: center;
+  padding: 4px 5px;
+  color: var(--text-dim);
+}
+table.sched-grid th.sticky-l, table.sched-grid td.sticky-l {
+  position: sticky;
+  z-index: 2;
+  background: var(--surface);
+}
+table.sched-grid thead th.sticky-l { z-index: 4; background: var(--surface-3); }
+table.sched-grid td.sticky-l { border-right: 1px solid var(--border); }
+table.sched-grid .col-sep { border-right: 2px solid var(--border-strong); }
+
+.day-cell {
+  width: var(--day-w);
+  min-width: var(--day-w);
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+.day-cell:hover { box-shadow: inset 0 0 0 2px var(--accent); }
+.day-cell.sel { box-shadow: inset 0 0 0 3px var(--accent); }
+.day-cell .code {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: var(--row-h);
+  display: block;
+}
+.day-cell.weekend { background: var(--surface-2); }
+
+/* Официален празник — залята е цялата колона, а в шапката стои звезда.
+   Носител на смисъла е заливката: ленти и черти върху клетките се четат като
+   боклук, залепен за кода, особено на черно-бяла хартия. */
+table.sched-grid thead th.day-cell.holiday {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+table.sched-grid tbody td.day-cell.holiday { background: color-mix(in srgb, var(--accent) 13%, var(--surface)); }
+.day-cell.has-error::after,
+.day-cell.has-warn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2.5px solid var(--error);
+  pointer-events: none;
+}
+.day-cell.has-warn::after { border-color: var(--warn); border-style: dashed; }
+
+.totals-cell { text-align: right; padding: 0 7px; min-width: 66px; }
+/* Отметка "доработка след отпуск" до пренесения остатък. */
+.badge-do {
+  display: inline-block;
+  float: left;
+  margin: 6px 4px 0 0;
+  padding: 0 4px;
+  border-radius: var(--r-sm);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 14px;
+  letter-spacing: .02em;
+  cursor: help;
+}
+
+.neg { color: var(--error); }
+.pos { color: var(--ok); }
+
+tr.emp-row:hover td { background: var(--surface-2); }
+tr.emp-row:hover td.day-cell.weekend { background: var(--surface-3); }
+
+/* ── Печат (D.8.2) ──────────────────────────────────────────────────────── */
+
+@media print {
+  @page { size: A4 landscape; margin: 6mm; }
+
+  /* Печатът винаги е на светла палитра, независимо от темата на екрана. */
+  :root, :root[data-theme="dark"], :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #ffffff;
+    --surface-3: #ececec;
+    --border: #000000;
+    --border-strong: #000000;
+    --text: #000000;
+    --text-dim: #333333;
+    --text-faint: #555555;
+    --accent: #000000;
+    --accent-strong: #000000;
+    --accent-ink: #ffffff;
+    --accent-text: #000000;
+    --accent-soft: #ffffff;
+    --error: #a30000;
+    --error-soft: #ffffff;
+    --warn: #6b4200;
+    --warn-soft: #ffffff;
+    --ok: #005c1f;
+    --ok-soft: #ffffff;
+  }
+  :root { --row-h: 18px; --day-w: 16px; }
+  html, body { background: #fff; color: #000; font-size: 9px; }
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+
+  /* Рамката на бланката се рисува само веднъж — от самата таблица. Обвивката
+     носеше своя рамка, която се удвояваше с рамките на крайните клетки. */
+  .grid-wrap { overflow: visible; border: 0; border-radius: 0; }
+  /* Сенките и закръгленията са екранни средства — на хартия само пречат. */
+  .card, .grid-wrap, .btn, .chip, .legend-code { box-shadow: none !important; border-radius: 0 !important; }
+  .app-bar, .nav, .tabs { display: none !important; }
+  table.sched-grid {
+    width: 100%;
+    font-size: 8px;
+    /* Слетите рамки не оставят двойни линии по границите на клетките. */
+    border-collapse: collapse;
+    border: 1px solid #000;
+  }
+  table.sched-grid th, table.sched-grid td { border-color: #000 !important; background: #fff !important; }
+  /* Празничната колона остава залята и на хартия — иначе от нея не остава
+     никакъв знак освен звездата в шапката. */
+  table.sched-grid thead th.day-cell.holiday { background: #dcdcdc !important; }
+  table.sched-grid tbody td.day-cell.holiday { background: #ebebeb !important; }
+  /* Шапката се смалява заедно с тялото — иначе числата на дните (11 px) са
+     по-широки от клетките (8 px) и колоните на шапката се разминават с мрежата. */
+  table.sched-grid thead th { position: static; background: #eee !important; font-size: 7px; padding: 2px 1px; }
+  table.sched-grid th.sticky-l, table.sched-grid td.sticky-l { position: static; }
+  .day-cell .code { color: #000 !important; font-size: 8px; }
+
+  /* Екранните маркировки не влизат в документа: и посочването, и изборът
+     рисуват втори контур върху рамката на клетката. */
+  .day-cell:hover, .day-cell.sel { box-shadow: none; }
+  /* Нарушенията остават видими, но с една линия дебелина на рамката. */
+  .day-cell.has-error::after, .day-cell.has-warn::after { border-width: 1px; }
+}
+.print-only { display: none; }
+
+/* ── Дребно ─────────────────────────────────────────────────────────────── */
+
+.scroll-y { overflow-y: auto; }
+.hairline { border-bottom: 1.5px solid var(--border); }
+a { color: var(--accent-text); }
+
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 6px; border: 3px solid var(--bg); }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* Колони, които се скриват на тесен екран, но остават в печата (C.2). */
+@media (max-width: 760px) {
+  .col-compact-hide { display: none; }
+}
+@media print {
+  .col-compact-hide { display: table-cell !important; }
+}
+
+/* Прилепени леви колони на мрежата. */
+.c-ack  { left: 0; width: 30px; min-width: 30px; }
+.c-serv { left: 30px; width: 46px; min-width: 46px; }
+.c-name { left: 76px; width: 186px; min-width: 186px; }
+.c-pos  { width: 118px; min-width: 118px; }
+.c-do   { width: 52px; min-width: 52px; }
+.c-wd   { width: 52px; min-width: 52px; }
+.c-rest { width: 98px; min-width: 98px; }
+@media (max-width: 760px) {
+  .c-name { left: 30px; width: 132px; min-width: 132px; }
+}
+@media print {
+  /* Прилепването отпада в печата; ширината се задава долу, заедно с останалите
+     колони на бланката. */
+  .c-name { left: auto; }
+}
+
+/* Итоговите колони, които трябва да се виждат, докато се попълват дните. */
+.r-total { width: 78px; min-width: 78px; }
+.r-diff  { width: 72px; min-width: 72px; }
+.r-carry { width: 78px; min-width: 78px; }
+
+@media screen and (min-width: 1200px) {
+  table.sched-grid th.st-r, table.sched-grid td.st-r {
+    position: sticky;
+    z-index: 2;
+    background: var(--surface);
+  }
+  table.sched-grid thead th.st-r { z-index: 4; background: var(--surface-3); }
+  .r-total { right: 150px; border-left: 2px solid var(--border-strong); }
+  .r-diff  { right: 78px; }
+  .r-carry { right: 0; }
+}
+
+/* Печатният бланк трябва да се събере в A4 landscape (D.8.2).
+   Полезната ширина при поле 6 mm е 285 mm ≈ 1077 px. Сборът на минималните
+   ширини по-долу е под нея и за месец с 31 дни, затова таблицата не прелива
+   на втора страница, а `width: 100%` разпределя остатъка равномерно. */
+@media print {
+  .c-serv { width: 24px;  min-width: 24px; }
+  .c-name { width: 92px;  min-width: 92px; }
+  .c-pos  { width: 58px;  min-width: 58px; }
+  .c-do   { width: 24px;  min-width: 24px; }
+  .c-wd   { width: 26px;  min-width: 26px; }
+  .c-rest { width: 48px;  min-width: 48px; }
+  .badge-do { display: none; }
+  .day-cell { width: 16px; min-width: 16px; }
+  .totals-cell { min-width: 32px; padding: 0 2px; }
+  /* Трите крайни колони носят екранните си ширини (78/72/78 px) — в печата те
+     изяждат мястото на дните и итоговият блок се разминава с мрежата. */
+  .r-total, .r-diff, .r-carry { width: 42px; min-width: 42px; }
+  /* Вертикални заглавия на итоговите колони — както в хартиения бланк. */
+  table.sched-grid thead th.totals-cell {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+    height: 104px;
+    font-size: 6.5px;
+    font-weight: 700;
+    overflow: hidden;
+    padding: 2px 0;
+  }
+  .card { border-color: #000; break-inside: avoid; }
+}
+
+/* Легендата на хартия: двете карти остават една до друга и се свиват, за да
+   се събере целият бланк на един лист заедно с мрежата и подписите.
+   Правилото стои след тясноекранното, за да го изпревари при печат. */
+@media print {
+  .legend { padding: 6px 8px 7px; }
+  .legend-title { margin-bottom: 5px; }
+  .legend-groups { grid-template-columns: 1.55fr 1fr !important; gap: 6px; }
+  .legend-card {
+    padding: 5px 7px;
+    background: #fafafa !important;
+    border: 0.5px solid #000 !important;
+  }
+  .legend-card-title {
+    font-size: 6.5px;
+    padding-bottom: 3px;
+    margin-bottom: 2px;
+    border-bottom: 0.5px solid #999;
+  }
+  .legend-table { font-size: 7px; }
+  .legend-table th { font-size: 6px; padding: 0 6px 2px 0; }
+  .legend-table td { padding: 0.5px 6px 0.5px 0; border-top: 0.5px solid #d5d5d5; }
+  .lc-code  { width: 34px; }
+  .lc-time  { width: 60px; padding-right: 7px !important; }
+  .lc-hours { width: 26px; }
+  .legend-code {
+    min-width: 22px;
+    height: 10px;
+    padding: 0 3px;
+    font-size: 6.5px;
+    border-width: 0.5px;
+    background: #fff !important;
+  }
+  .legend-holiday {
+    margin-top: 6px;
+    padding: 4px 7px;
+    gap: 6px;
+    font-size: 7px;
+    border: 0.5px solid #000 !important;
+    background: #f0f0f0 !important;
+  }
+  .legend-holiday-star { font-size: 8px; }
+}
