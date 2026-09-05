@@ -696,3 +696,29 @@ a { color: var(--accent-text); }
   }
   .legend-holiday-star { font-size: 8px; }
 }
+
+/* ── Лента за потвърждаване на форма ────────────────────────────────────── */
+
+/* Разделът „Общи настройки“ е висок няколко екрана; бутонът в самия му край
+   на практика оставаше невидим. Лентата се движи с прегледа и стои над
+   съдържанието. */
+.save-bar {
+  position: sticky;
+  bottom: 10px;
+  z-index: 20;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 11px 13px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: saturate(1.4) blur(10px);
+  box-shadow: var(--shadow-2);
+}
+.save-bar.is-dirty {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-2), 0 0 0 1px var(--accent);
+}
+@media print { .save-bar { display: none !important; } }

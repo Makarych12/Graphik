@@ -2,33 +2,50 @@
 
 import { useMemo, useState } from "react";
 import { useApp } from "@/lib/store";
-import { listHolidays, type HolidayEntry } from "@/lib/holidays";
-import { MONTHS_BG, countWorkingDays } from "@/lib/time";
+import { holidaysWith, listHolidays, toIso, isoToKey, type HolidayEntry } from "@/lib/holidays";
+import { MONTHS_BG, daysInMonth, isWeekend } from "@/lib/time";
 
 /**
  * Редактор на производствения календар. Вграденият списък по чл.154 КТ се смята
  * автоматично за всяка година (включително православния Великден и
  * преместванията, когато празник се падне в събота или неделя). Тук се записват
  * само отклоненията — например преместване със заповед на Министерския съвет.
+ *
+ * Работи върху черновата на настройките: редакциите се виждат веднага тук, но
+ * влизат в производствения календар на графика чак след „Запази“.
  */
-export default function Holidays() {
-  const { settings, updateSettings, schedule } = useApp();
+export default function Holidays({
+  value,
+  onChange,
+}: {
+  value: Record<string, HolidayEntry[]>;
+  onChange: (next: Record<string, HolidayEntry[]>) => void;
+}) {
+  const schedule = useApp((s) => s.schedule);
   const [year, setYear] = useState(schedule?.header.year ?? new Date().getFullYear());
   const [newDate, setNewDate] = useState("");
   const [newName, setNewName] = useState("");
 
-  // Списъкът зависи от поправките в настройките.
-  const rows = useMemo(() => listHolidays(year), [year, settings.holidays]);
-  const monthsLine = useMemo(
-    () => Array.from({ length: 12 }, (_, i) => `${MONTHS_BG[i]} ${countWorkingDays(year, i + 1)}`).join(" · "),
-    [year, settings.holidays],
-  );
+  const rows = useMemo(() => listHolidays(year, value), [year, value]);
+
+  // Работните дни се смятат по същото правило като countWorkingDays, но върху
+  // черновата — иначе редът щеше да показва още незаписаното състояние.
+  const monthsLine = useMemo(() => {
+    const map = holidaysWith(year, value);
+    return Array.from({ length: 12 }, (_, i) => {
+      const m = i + 1;
+      let n = 0;
+      for (let d = 1; d <= daysInMonth(year, m); d++) {
+        if (!isWeekend(year, m, d) && !map.has(isoToKey(toIso(year, m, d)))) n++;
+      }
+      return `${MONTHS_BG[i]} ${n}`;
+    }).join(" · ");
+  }, [year, value]);
 
   const yearKey = String(year);
-  const overrides: HolidayEntry[] = settings.holidays[yearKey] ?? [];
+  const overrides: HolidayEntry[] = value[yearKey] ?? [];
 
-  const setOverrides = (next: HolidayEntry[]) =>
-    updateSettings({ holidays: { ...settings.holidays, [yearKey]: next } });
+  const setOverrides = (next: HolidayEntry[]) => onChange({ ...value, [yearKey]: next });
 
   const upsert = (entry: HolidayEntry) =>
     setOverrides([...overrides.filter((o) => o.date !== entry.date), entry]);
@@ -46,9 +63,9 @@ export default function Holidays() {
           <button
             className="btn btn-sm"
             onClick={() => {
-              const rest = { ...settings.holidays };
+              const rest = { ...value };
               delete rest[yearKey];
-              updateSettings({ holidays: rest });
+              onChange(rest);
             }}
           >
             Върни по подразбиране ({overrides.length} поправки)
@@ -109,12 +126,10 @@ export default function Holidays() {
           disabled={!newDate || !newName.trim()}
           onClick={() => {
             const y = String(new Date(newDate).getFullYear());
-            const list = settings.holidays[y] ?? [];
-            updateSettings({
-              holidays: {
-                ...settings.holidays,
-                [y]: [...list.filter((o) => o.date !== newDate), { date: newDate, name: newName.trim() }],
-              },
+            const list = value[y] ?? [];
+            onChange({
+              ...value,
+              [y]: [...list.filter((o) => o.date !== newDate), { date: newDate, name: newName.trim() }],
             });
             setYear(Number(y));
             setNewDate(""); setNewName("");
@@ -128,10 +143,11 @@ export default function Holidays() {
         Работни дни по месеци за {year}: <span className="num">{monthsLine}</span>
       </p>
       <p style={{ fontSize: 11, color: "var(--text-faint)", margin: 0 }}>
-        Промените веднага влизат в производствения календар. За вече откритите месеци
-        нормата се пресмята наново с бутона „Пресметни по календар“ в шапката на графика.
-        Трудът в официален празник се отчита отделно в колоната „Труд в празник (×2)“ —
-        заплаща се не по-малко от удвоения размер (чл.264 КТ).
+        Промените влизат в производствения календар след „Запази“ в края на раздела.
+        За вече откритите месеци нормата се пресмята наново с бутона „Пресметни по
+        календар“ в шапката на графика. Трудът в официален празник се отчита отделно
+        в колоната „Труд в празник (×2)“ — заплаща се не по-малко от удвоения размер
+        (чл.264 КТ).
       </p>
     </>
   );

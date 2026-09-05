@@ -124,26 +124,17 @@ const TAB_LABEL: Record<Tab, string> = {
 };
 
 /**
- * Полетата, които се потвърждават с „Запази“ в края на раздела. Държат се в
- * чернова: докато не се натисне бутонът, темата не се сменя и коефициентите не
- * влизат в изчисленията на месеца.
+ * Целият раздел е една форма: черновата е копие на настройките и нищо от нея
+ * не стига до изчисленията на месеца (D.5) и до правната проверка, докато не
+ * се натисне „Запази“. Държим целия обект, а не избрани полета — така всяко
+ * ново поле в раздела влиза в записа автоматично.
  *
- * Празниците, длъжностите, легендата и архивът остават с незабавно действие —
- * те са списъци със собствени действия за добавяне и изтриване.
+ * Извън черновата остава само „Данни“ — там няма полета, а действия (износ и
+ * внос на архив), които сами по себе си са завършени операции.
  */
-type GeneralDraft = Pick<
-  Settings,
-  "theme" | "nightStart" | "nightEnd" | "nightFactor" | "weeklyMaxHours" | "holidayPayFactor"
->;
+type GeneralDraft = Settings;
 
-const pickGeneral = (s: Settings): GeneralDraft => ({
-  theme: s.theme,
-  nightStart: s.nightStart,
-  nightEnd: s.nightEnd,
-  nightFactor: s.nightFactor,
-  weeklyMaxHours: s.weeklyMaxHours,
-  holidayPayFactor: s.holidayPayFactor,
-});
+const pickGeneral = (s: Settings): GeneralDraft => structuredClone(s);
 
 export default function SettingsPage() {
   const { settings, updateSettings, saveNow, lastSaved } = useApp();
@@ -182,7 +173,7 @@ export default function SettingsPage() {
     }
   };
 
-  const setCode = (c: ShiftCode) => updateSettings({ codes: settings.codes.map((x) => (x.id === c.id ? c : x)) });
+  const setCode = (c: ShiftCode) => setDraft({ codes: gen.codes.map((x) => (x.id === c.id ? c : x)) });
   const flash = (t: string) => { setMsg(t); setTimeout(() => setMsg(""), 4000); };
 
   return (
@@ -264,15 +255,15 @@ export default function SettingsPage() {
         title="Официални празници"
         hint="Производственият календар по чл.154 от Кодекса на труда. Влиза в НОРМА /часове/ на месеца и в отчитането на труда в празник."
       >
-        <Holidays />
+        <Holidays value={gen.holidays} onChange={(holidays) => setDraft({ holidays })} />
       </Section>
 
       <Section title="Длъжности" hint="По една на ред. Ползват се като подсказки при въвеждане на служител в справочника.">
         <textarea
           className="input"
           style={{ minHeight: 96, fontFamily: "var(--mono)" }}
-          value={settings.positions.join("\n")}
-          onChange={(e) => updateSettings({ positions: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) })}
+          value={gen.positions.join("\n")}
+          onChange={(e) => setDraft({ positions: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) })}
         />
       </Section>
 
@@ -281,16 +272,16 @@ export default function SettingsPage() {
         hint="Базовият набор е снет от реален бланк на депото. Кодовете, часовете, цветовете и прекъсванията се редактират свободно за конкретната бригада."
       >
         <div style={{ display: "grid", gap: 6 }}>
-          {settings.codes.map((c) => (
+          {gen.codes.map((c) => (
             <CodeRow key={c.id} code={c} onChange={setCode}
-              onDelete={() => updateSettings({ codes: settings.codes.filter((x) => x.id !== c.id) })} />
+              onDelete={() => setDraft({ codes: gen.codes.filter((x) => x.id !== c.id) })} />
           ))}
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
           <button
             className="btn"
-            onClick={() => updateSettings({
-              codes: [...settings.codes, {
+            onClick={() => setDraft({
+              codes: [...gen.codes, {
                 id: `c${Date.now().toString(36)}`, code: "", label: "Нов код",
                 category: "work", start: "08:00", end: "16:00", hours: 8, breaks: [], color: "#546E7A",
               }],
@@ -298,7 +289,7 @@ export default function SettingsPage() {
           >
             + Код
           </button>
-          <button className="btn" onClick={() => { if (confirm("Възстановяване на базовата легенда от реалния бланк? Ръчните промени по кодовете ще се загубят.")) updateSettings({ codes: DEFAULT_CODES }); }}>
+          <button className="btn" onClick={() => { if (confirm("Възстановяване на базовата легенда от реалния бланк? Ръчните промени по кодовете ще се загубят.")) setDraft({ codes: DEFAULT_CODES }); }}>
             Възстанови базовата легенда
           </button>
         </div>
@@ -342,25 +333,23 @@ export default function SettingsPage() {
         {msg && <div className="chip chip-accent" style={{ marginTop: 8 }}>{msg}</div>}
       </Section>
 
-      {/* Потвърждаване на общите настройки. Докато не се натисне, темата,
-          моделът и коефициентите стоят само в тази форма. */}
-      <div
-        className="card"
-        style={{
-          padding: 12, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap",
-          borderColor: genDirty ? "var(--accent)" : "var(--border)",
-          borderWidth: genDirty ? 2 : 1.5,
-        }}
-      >
+      {/* Потвърждаване на раздела. Лентата е прилепена към долния ръб: преди
+          стоеше в края на много дълга страница и на практика не се виждаше. */}
+      <div className={genDirty ? "save-bar is-dirty" : "save-bar"}>
         <button
           className="btn btn-primary"
-          style={{ minWidth: 160, minHeight: 46 }}
+          style={{ minWidth: 150, minHeight: 44 }}
           disabled={saving || !genDirty}
           onClick={() => void saveGeneral()}
         >
           {saving ? "Записване…" : "Запази"}
         </button>
-        <div style={{ flex: 1, minWidth: 240, fontSize: 12, color: "var(--text-dim)" }}>
+        {genDirty && (
+          <button className="btn" disabled={saving} onClick={() => { setGenTouched(false); setGen(pickGeneral(settings)); }}>
+            Отказ
+          </button>
+        )}
+        <div style={{ flex: 1, minWidth: 200, fontSize: 12, color: "var(--text-dim)" }}>
           {genDirty ? (
             <span className="chip chip-warn">Има незаписани промени</span>
           ) : lastSaved ? (
@@ -368,17 +357,12 @@ export default function SettingsPage() {
           ) : (
             <span className="chip chip-ok">Всичко е записано</span>
           )}
-          <div style={{ marginTop: 6 }}>
-            Записва темата и коефициентите за изчисляване (нощен труд, приравняване,
-            максимум часове на седмица, труд в празник). Празниците, длъжностите,
-            легендата и архивът се прилагат веднага.
+          <div style={{ marginTop: 5 }}>
+            Записва целия раздел: тема, коефициентите за изчисляване, производствения
+            календар, длъжностите и легендата. До натискане на бутона нищо от тях не
+            влиза в графика и в правната проверка.
           </div>
         </div>
-        {genDirty && (
-          <button className="btn" disabled={saving} onClick={() => { setGenTouched(false); setGen(pickGeneral(settings)); }}>
-            Отказ
-          </button>
-        )}
       </div>
       </>
       )}

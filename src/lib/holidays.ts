@@ -116,16 +116,29 @@ export function getHolidayOverrides(): Record<string, HolidayEntry[]> {
   return overrides;
 }
 
-/** Действащите неработни дни за годината: вградените плюс ръчните поправки. */
-export function holidays(year: number): Map<string, string> {
-  const hit = cache.get(year);
-  if (hit) return hit;
+/**
+ * Неработните дни за годината по конкретен набор поправки — без да се пипа
+ * състоянието на модула. Ползва се от редактора на календара в настройките,
+ * който показва още незаписана чернова.
+ */
+export function holidaysWith(
+  year: number,
+  o: Record<string, HolidayEntry[]>,
+): Map<string, string> {
   const map = builtinHolidays(year);
-  for (const e of overrides[String(year)] ?? []) {
+  for (const e of o[String(year)] ?? []) {
     const k = isoToKey(e.date);
     if (e.removed) map.delete(k);
     else map.set(k, e.name);
   }
+  return map;
+}
+
+/** Действащите неработни дни за годината: вградените плюс ръчните поправки. */
+export function holidays(year: number): Map<string, string> {
+  const hit = cache.get(year);
+  if (hit) return hit;
+  const map = holidaysWith(year, overrides);
   cache.set(year, map);
   return map;
 }
@@ -147,7 +160,10 @@ export type HolidayRow = {
   removed: boolean;
 };
 
-export function listHolidays(year: number): HolidayRow[] {
+export function listHolidays(
+  year: number,
+  o: Record<string, HolidayEntry[]> = overrides,
+): HolidayRow[] {
   const base = builtinHolidays(year);
   const rows = new Map<string, HolidayRow>();
 
@@ -155,7 +171,7 @@ export function listHolidays(year: number): HolidayRow[] {
     const [y, m, d] = k.split("-").map(Number);
     rows.set(k, { date: toIso(y, m, d), name, builtin: true, removed: false });
   }
-  for (const e of overrides[String(year)] ?? []) {
+  for (const e of o[String(year)] ?? []) {
     const k = isoToKey(e.date);
     const existing = rows.get(k);
     if (e.removed) {
