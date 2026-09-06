@@ -19,6 +19,7 @@ export default function PatchPreview() {
   const schedule = useResolved();
   const [understood, setUnderstood] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState("");
 
   const sim = useMemo(() => {
     if (!pendingPatch || !schedule) return null;
@@ -59,6 +60,13 @@ export default function PatchPreview() {
           <button className="btn btn-sm" style={{ marginLeft: "auto" }} onClick={clearLastApply}>Скрий</button>
         </div>
         <div style={{ padding: "8px 12px", fontSize: 13 }}>{lastApply.summary}</div>
+        {lastApply.saved === false && (
+          <div style={{ padding: "0 12px 10px", fontSize: 12, fontWeight: 700, color: "var(--error)" }}>
+            ⚠ Промяната е в таблицата, но НЕ е записана в хранилището
+            {lastApply.saveError ? `: ${lastApply.saveError}` : "."} При презареждане ще се загуби —
+            натиснете „Запази“, а ако пак не стане, проверете дали браузърът не е в режим „инкогнито“.
+          </div>
+        )}
         {bad.length === 0 && warn.length === 0 ? (
           <div style={{ padding: "0 12px 10px", fontSize: 12, color: "var(--text-dim)" }}>
             Правната проверка по Наредба № 50 не откри нови нарушения.
@@ -88,8 +96,13 @@ export default function PatchPreview() {
 
   const apply = async () => {
     setBusy(true);
+    setFailed("");
     try {
       await applyPendingPatch();
+    } catch (e) {
+      // Без това счупване вътре в прилагането изглежда като бутон, който не
+      // прави нищо — точно най-объркващото поведение.
+      setFailed((e as Error)?.message || String(e));
     } finally {
       setBusy(false);
       setUnderstood(false);
@@ -183,6 +196,12 @@ export default function PatchPreview() {
             <input type="checkbox" checked={understood} onChange={(e) => setUnderstood(e.target.checked)} style={{ marginTop: 2 }} />
             Разбирам, че действието е необратимо за всички бъдещи месеци.
           </label>
+        </div>
+      )}
+
+      {failed && (
+        <div style={{ padding: "8px 12px", background: "var(--error-soft)", color: "var(--error)", fontSize: 12, fontWeight: 700 }}>
+          Промяната не беше приложена: {failed}
         </div>
       )}
 

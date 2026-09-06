@@ -138,10 +138,36 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => mq.removeEventListener("change", sync);
   }, [ready, theme]);
 
-  // Регистрация на service worker — само в продукция, за да работи офлайн.
+  /**
+   * Регистрация на service worker — само в продукция, за да работи офлайн.
+   *
+   * Адресът носи отпечатъка на сборката: при нов деплой това е друг скрипт,
+   * браузърът инсталира новия worker, той изтрива кеша на предишната версия и
+   * поема управлението веднага (skipWaiting + clients.claim в sw.js). Тогава
+   * страницата се презарежда веднъж, за да върви наистина новият код — но
+   * чак след като незаписаното се прибере в базата.
+   */
   useEffect(() => {
     if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
-    void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+    const version = process.env.NEXT_PUBLIC_BUILD_ID ?? "dev";
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    let reloading = false;
+
+    const onControllerChange = () => {
+      // Първата регистрация също вдига събитието — тогава няма какво да се
+      // презарежда, кодът вече е свежият.
+      if (!hadController || reloading) return;
+      reloading = true;
+      void useApp.getState().saveNow().catch(() => undefined).then(() => window.location.reload());
+    };
+    navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
+
+    void navigator.serviceWorker
+      .register(`/sw.js?v=${version}`)
+      .then((reg) => reg.update().catch(() => undefined))
+      .catch(() => undefined);
+
+    return () => navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
   }, []);
 
   useEffect(() => {

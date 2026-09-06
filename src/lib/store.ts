@@ -83,6 +83,10 @@ export type ApplyReport = {
   after: number;
   /** Нарушенията, които се появяват заради тази промяна. */
   fresh: Violation[];
+  /** Стигна ли промяната до хранилището, или е останала само в паметта. */
+  saved: boolean;
+  /** Защо записът не е минал — показва се на нарядчика. */
+  saveError?: string;
 };
 
 export type SaveReport = {
@@ -230,6 +234,15 @@ function mergePatches(a: Patch, b: Patch): Patch {
     summaries,
     summary: summaries.join(" · "),
   };
+}
+
+/** Правната картина, но без да хвърля — ползва се около прилагането. */
+function safeViolations(s: Pick<State, "schedule" | "employees" | "settings" | "tripBoard">): Violation[] {
+  try {
+    return violationsNow(s);
+  } catch {
+    return [];
+  }
 }
 
 /** Пълната правна картина в момента: смени + повески. */
@@ -844,7 +857,9 @@ export const useApp = create<State>((set, get) => {
       const p = get().pendingPatch;
       if (!p) return null;
 
-      const before = violationsNow(get());
+      // Правната картина е само за отчета — счупи ли се, прилагането трябва
+      // да продължи, а не да остави нарядчика с бутон, който не прави нищо.
+      const before = safeViolations(get());
 
       if (p.cells.length) get().setCells(p.cells);
       if (p.header) get().updateHeader(p.header);
@@ -880,7 +895,19 @@ export const useApp = create<State>((set, get) => {
         }
       }
 
-      const after = violationsNow(get());
+      // Записваме веднага, а не след отложения таймер: иначе между клика и
+      // записа има прозорец, в който презареждане или затворен раздел губи
+      // промяната, при това без нито дума към нарядчика.
+      let saved = true;
+      let saveError: string | undefined;
+      try {
+        await get().saveNow();
+      } catch (e) {
+        saved = false;
+        saveError = (e as Error)?.message || String(e);
+      }
+
+      const after = safeViolations(get());
       const known = new Set(before.map((v) => v.id));
       const report: ApplyReport = {
         at: new Date().toISOString(),
@@ -888,6 +915,8 @@ export const useApp = create<State>((set, get) => {
         before: before.filter((v) => v.severity === "error").length,
         after: after.filter((v) => v.severity === "error").length,
         fresh: after.filter((v) => v.severity !== "info" && !known.has(v.id)),
+        saved,
+        ...(saveError ? { saveError } : {}),
       };
       set({ pendingPatch: null, lastApply: report });
       return report;
