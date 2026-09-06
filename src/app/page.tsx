@@ -51,7 +51,9 @@ export default function SmeniPage() {
   if (!schedule) return null;
 
   return (
-    <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+    // flexWrap: на тесен екран панелът на асистента минава на собствен ред под
+    // таблицата (виж .ai-panel в globals.css), вместо да я смачква.
+    <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
       <div style={{ flex: 1, minWidth: 0 }} data-print-density={printDensity(employees.length)}>
         <Toolbar onToggleAI={() => setAi(!ai)} aiOpen={ai} />
 

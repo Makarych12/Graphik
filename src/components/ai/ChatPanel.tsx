@@ -93,26 +93,20 @@ export default function ChatPanel({ onClose }: { onClose: () => void }) {
   const visible = history.filter((m) => (m.role === "user" || m.role === "assistant") && m.content);
 
   return (
-    <aside
-      className="card no-print"
-      style={{
-        display: "flex", flexDirection: "column", width: "100%", maxWidth: 420,
-        position: "sticky", top: 62, maxHeight: "calc(100dvh - 74px)", overflow: "hidden",
-      }}
-    >
-      <div className="hairline" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px" }}>
+    <aside className="card no-print ai-panel">
+      <div className="hairline ai-fixed" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px" }}>
         <strong style={{ fontSize: 14 }}>ИИ-асистент</strong>
         <button className="btn btn-sm" style={{ marginLeft: "auto" }} onClick={onClose}>✕</button>
       </div>
 
       {!online && (
-        <div style={{ padding: 12, background: "var(--warn-soft)", color: "var(--warn)", fontSize: 13, fontWeight: 700 }}>
+        <div className="ai-fixed" style={{ padding: 12, background: "var(--warn-soft)", color: "var(--warn)", fontSize: 13, fontWeight: 700 }}>
           Няма връзка с интернет. ИИ-асистентът работи само онлайн — таблицата,
           изчисленията и правната проверка продължават да работят офлайн.
         </div>
       )}
 
-      <div ref={scrollRef} className="scroll-y" style={{ flex: 1, padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div ref={scrollRef} className="ai-scroll" style={{ padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
         {visible.length === 0 && (
           <div style={{ fontSize: 13, color: "var(--text-dim)" }}>
             <p style={{ marginTop: 0 }}>
@@ -155,12 +149,14 @@ export default function ChatPanel({ onClose }: { onClose: () => void }) {
           </div>
         )}
         {error && <div className="chip chip-error" style={{ whiteSpace: "normal", height: "auto", padding: 8 }}>{error}</div>}
-
-        <PatchPreview />
       </div>
 
+      {/* Предложението стои извън плъзгащия се разговор: то има собствена
+          височина и собствен скрол, а бутоните му остават винаги видими. */}
+      <PatchPreview />
+
       <form
-        className="hairline"
+        className="hairline ai-fixed"
         style={{ display: "flex", gap: 6, padding: 10, borderTop: "1.5px solid var(--border)" }}
         onSubmit={(e) => { e.preventDefault(); void send(input); }}
       >

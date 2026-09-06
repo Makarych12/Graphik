@@ -49,16 +49,17 @@ export default function PatchPreview() {
     const warn = lastApply.fresh.filter((v) => v.severity === "warning");
     return (
       <div
-        className="card no-print"
-        style={{ borderColor: bad.length ? "var(--error)" : "var(--ok, var(--border))", borderWidth: 2, marginTop: 10, overflow: "hidden" }}
+        className="card no-print patch-card"
+        style={{ borderColor: bad.length ? "var(--error)" : "var(--ok, var(--border))", borderWidth: 2, marginTop: 10 }}
       >
-        <div style={{ background: bad.length ? "var(--error-soft)" : "var(--surface-2)", padding: "8px 12px", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <div className="ai-fixed" style={{ background: bad.length ? "var(--error-soft)" : "var(--surface-2)", padding: "8px 12px", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <strong style={{ fontSize: 13 }}>Промяната е приложена</strong>
           <span className={`chip ${lastApply.after > lastApply.before ? "chip-error" : lastApply.after < lastApply.before ? "chip-ok" : ""}`}>
             нарушения: {lastApply.before} → {lastApply.after}
           </span>
           <button className="btn btn-sm" style={{ marginLeft: "auto" }} onClick={clearLastApply}>Скрий</button>
         </div>
+        <div className="patch-body">
         <div style={{ padding: "8px 12px", fontSize: 13 }}>{lastApply.summary}</div>
         {lastApply.saved === false && (
           <div style={{ padding: "0 12px 10px", fontSize: 12, fontWeight: 700, color: "var(--error)" }}>
@@ -84,6 +85,7 @@ export default function PatchPreview() {
             ))}
           </div>
         )}
+        </div>
       </div>
     );
   }
@@ -111,10 +113,10 @@ export default function PatchPreview() {
 
   return (
     <div
-      className="card no-print"
-      style={{ borderColor: danger ? "var(--error)" : "var(--accent)", borderWidth: 2, marginTop: 10, overflow: "hidden" }}
+      className="card no-print patch-card"
+      style={{ borderColor: danger ? "var(--error)" : "var(--accent)", borderWidth: 2, marginTop: 10 }}
     >
-      <div style={{ background: danger ? "var(--error-soft)" : "var(--accent-soft)", padding: "8px 12px", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+      <div className="ai-fixed" style={{ background: danger ? "var(--error-soft)" : "var(--accent-soft)", padding: "8px 12px", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <strong style={{ fontSize: 13 }}>
           {danger ? "Необратимо действие — чака потвърждение" : "Предложение от ИИ — чака потвърждение"}
         </strong>
@@ -127,6 +129,7 @@ export default function PatchPreview() {
         )}
       </div>
 
+      <div className="patch-body">
       <div style={{ padding: "8px 12px", fontSize: 13, display: "grid", gap: 3 }}>
         {(pendingPatch.summaries?.length ? pendingPatch.summaries : [pendingPatch.summary]).map((t, i) => (
           <div key={i}>{t}</div>
@@ -162,7 +165,7 @@ export default function PatchPreview() {
       )}
 
       {groups.length > 0 && (
-        <div className="scroll-y" style={{ maxHeight: 260, borderTop: "1px solid var(--border)" }}>
+        <div style={{ borderTop: "1px solid var(--border)" }}>
           <table className="sched-grid" style={{ width: "100%" }}>
             <thead>
               <tr>
@@ -188,8 +191,10 @@ export default function PatchPreview() {
         </div>
       )}
 
+      </div>
+
       {danger && (
-        <div style={{ padding: 12, background: "var(--error-soft)", borderTop: "1.5px solid var(--error)", display: "grid", gap: 8 }}>
+        <div className="ai-fixed" style={{ padding: 12, background: "var(--error-soft)", borderTop: "1.5px solid var(--error)", display: "grid", gap: 8 }}>
           <strong style={{ fontSize: 13, color: "var(--error)" }}>⚠ {danger.title}</strong>
           <div style={{ fontSize: 13, lineHeight: 1.5 }}>{danger.text}</div>
           <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
@@ -200,12 +205,12 @@ export default function PatchPreview() {
       )}
 
       {failed && (
-        <div style={{ padding: "8px 12px", background: "var(--error-soft)", color: "var(--error)", fontSize: 12, fontWeight: 700 }}>
+        <div className="ai-fixed" style={{ padding: "8px 12px", background: "var(--error-soft)", color: "var(--error)", fontSize: 12, fontWeight: 700 }}>
           Промяната не беше приложена: {failed}
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 8, padding: 10, borderTop: "1.5px solid var(--border)" }}>
+      <div className="ai-fixed" style={{ display: "flex", gap: 8, padding: 10, borderTop: "1.5px solid var(--border)" }}>
         <button
           className={danger ? "btn btn-danger" : "btn btn-primary"}
           style={{ flex: 1 }}

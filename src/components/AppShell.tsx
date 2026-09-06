@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useApp } from "@/lib/store";
@@ -120,6 +120,7 @@ function MonthPicker() {
 }
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
+  const barRef = useRef<HTMLElement>(null);
   const pathname = usePathname();
   const { ready, init } = useApp();
 
@@ -170,6 +171,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
   }, []);
 
+  /**
+   * Височината на шапката отива в --app-bar-h. Панелът на асистента стъпва на
+   * нея; при пренасяне на редовете (тесен екран) фиксирано число би дало
+   * панел, който стърчи под екрана и не се плъзга както трябва.
+   */
+  useEffect(() => {
+    const el = barRef.current;
+    if (!el) return;
+    const apply = () =>
+      document.documentElement.style.setProperty("--app-bar-h", `${Math.round(el.getBoundingClientRect().height)}px`);
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   useEffect(() => {
     const set = () => useApp.setState({ online: navigator.onLine });
     set();
@@ -183,7 +200,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
-      <header className="no-print app-bar">
+      <header ref={barRef} className="no-print app-bar">
         <div style={{ display: "flex", alignItems: "center", gap: 9, marginRight: "auto" }}>
           <div
             aria-hidden
