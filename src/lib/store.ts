@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { create } from "zustand";
 import type {
   CarryOverReason, Cell, Employee, ResolvedSchedule, RosterEmployee, Schedule, ScheduleHeader,
-  ScheduleParticipant, ScheduleStatus, Settings, Trip, TripBoard,
+  ScheduleParticipant, ScheduleStatus, Settings, Trip, TripBoard, Violation,
 } from "./types";
 import { DEFAULT_HEADER, DEFAULT_SETTINGS, emptyRosterEmployee } from "./defaults";
 import { seedRoster, seedSchedule } from "./seed";
@@ -13,6 +13,8 @@ import { calcEmployee } from "./calc";
 import { countWorkingDays, scheduleId } from "./time";
 import { setHolidayOverrides } from "./holidays";
 import { patternMonth } from "./patterns";
+import { validateSchedule } from "./validation";
+import { validateTrips } from "./trips";
 
 /** Едно предложено изменение на клетка — за предпросмотъра преди прилагане (D.7.1). */
 export type CellChange = {
@@ -22,14 +24,52 @@ export type CellChange = {
   to: Cell | null;
 };
 
+/**
+ * Действие в предложението, което не е клетка: справочник, състав на месеца,
+ * повеска или преизчисляване. Всяко носи готов човешки текст (`label`) и по
+ * желание редове „беше → ще стане“ (`details`), за да може предпросмотърът да
+ * се чете, без да се показва суров JSON (D.7.1).
+ */
+export type PatchOp =
+  | { kind: "roster.add"; label: string; details?: string[]; data: Partial<RosterEmployee> }
+  | { kind: "roster.update"; label: string; details?: string[]; employeeId: string; changes: Partial<RosterEmployee> }
+  | { kind: "roster.delete"; label: string; details?: string[]; employeeId: string }
+  | { kind: "month.remove"; label: string; details?: string[]; employeeId: string }
+  | { kind: "month.restore"; label: string; details?: string[]; employeeId: string }
+  | { kind: "trip.create"; label: string; details?: string[]; trip: Trip }
+  | { kind: "trip.update"; label: string; details?: string[]; tripId: string; changes: Partial<Trip> }
+  | { kind: "month.recalc"; label: string; details?: string[] };
+
 export type Patch = {
   id: string;
   /** Кратко описание, което ИИ дава на предложението. */
   summary: string;
   cells: CellChange[];
   header?: Partial<ScheduleHeader>;
+  /** Промени извън клетките — по реда, в който трябва да се приложат. */
+  ops?: PatchOp[];
+  /**
+   * Необратимо действие: предпросмотърът иска отделно, по-силно потвърждение
+   * вместо обичайното „Приложи“ (изтриване от справочника).
+   */
+  danger?: { title: string; text: string; confirmLabel: string };
   /** Източник — за да се вижда кой е предложил промяната. */
   source: "ai" | "user";
+};
+
+/**
+ * Какво се е случило при последното прилагане. Правната проверка се пуска
+ * автоматично веднага след записа и новите нарушения се показват на нарядчика;
+ * промяната НЕ се отменя автоматично — само се сигнализира (D.7.1 т.5).
+ */
+export type ApplyReport = {
+  at: string;
+  summary: string;
+  /** Брой нарушения (error) преди и след прилагането. */
+  before: number;
+  after: number;
+  /** Нарушенията, които се появяват заради тази промяна. */
+  fresh: Violation[];
 };
 
 export type SaveReport = {
@@ -96,15 +136,21 @@ type State = {
   updateTrip: (id: string, patch: Partial<Trip>) => void;
   removeTrip: (id: string) => void;
 
+  /** Преизчислява нормата от производствения календар и пренесените остатъци. */
+  recalculateMonth: () => Promise<{ normHours: number; participants: number }>;
+
   proposePatch: (p: Omit<Patch, "id">) => void;
-  applyPendingPatch: () => void;
+  applyPendingPatch: () => Promise<ApplyReport | null>;
   discardPendingPatch: () => void;
+  /** Резултатът от автоматичната проверка след последното прилагане. */
+  lastApply: ApplyReport | null;
+  clearLastApply: () => void;
 
   saveNow: () => Promise<SaveReport>;
 };
 
 /** Обединява справочника с участието в месеца — редът е редът на участниците. */
-function resolveEmployees(schedule: Schedule | null, roster: RosterEmployee[]): Employee[] {
+export function resolveEmployees(schedule: Schedule | null, roster: RosterEmployee[]): Employee[] {
   if (!schedule) return [];
   const byId = new Map(roster.map((e) => [e.id, e]));
   const out: Employee[] = [];
@@ -134,6 +180,16 @@ export function resolved(s: Pick<State, "schedule" | "employees">): ResolvedSche
   const { participants: _p, ...rest } = s.schedule;
   void _p;
   return { ...rest, employees: s.employees };
+}
+
+/** Пълната правна картина в момента: смени + повески. */
+function violationsNow(s: Pick<State, "schedule" | "employees" | "settings" | "tripBoard">): Violation[] {
+  const sched = resolved(s);
+  if (!sched) return [];
+  return [
+    ...validateSchedule(sched, s.settings),
+    ...validateTrips(s.tripBoard?.trips ?? [], sched.employees, s.settings),
+  ];
 }
 
 /**
@@ -299,6 +355,7 @@ export const useApp = create<State>((set, get) => {
     employees: [],
     tripBoard: null,
     pendingPatch: null,
+    lastApply: null,
     online: true,
     dirty: false,
     lastSaved: null,
@@ -678,20 +735,98 @@ export const useApp = create<State>((set, get) => {
       touch({ tripBoard: { ...tb, trips: tb.trips.filter((t) => t.id !== id), updatedAt: new Date().toISOString() } });
     },
 
+    /**
+     * Преизчислява месеца: нормата се взема наново от производствения календар,
+     * а остатъкът (+/−) на всеки участник — от фактически записания предходен
+     * месец. Самите часове по редовете се смятат при всяко показване, затова
+     * тук се обновява само това, което наистина стои записано.
+     */
+    async recalculateMonth() {
+      const cur = get().schedule;
+      if (!cur) return { normHours: 0, participants: 0 };
+      const { year, month } = cur.header;
+      const normHours = countWorkingDays(year, month) * 8;
+      const carryOf = await makeCarryOf(year, month, get().roster, get().settings);
+      mutate((s) => ({
+        ...s,
+        header: { ...s.header, normHours },
+        participants: s.participants.map((p) => {
+          const c = carryOf(p.employeeId);
+          const { carryOverReason: _drop, ...rest } = p;
+          void _drop;
+          return { ...rest, carryOver: c.hours, ...(c.reason ? { carryOverReason: c.reason } : {}) };
+        }),
+      }));
+      return { normHours, participants: cur.participants.length };
+    },
+
     proposePatch(p) {
       set({ pendingPatch: { ...p, id: `p${Date.now().toString(36)}` } });
     },
 
-    applyPendingPatch() {
+    /**
+     * Прилага предложението и веднага пуска правната проверка. Новите нарушения
+     * не отменят промяната — нарядчикът ги вижда и решава сам (D.7.1 т.5).
+     */
+    async applyPendingPatch() {
       const p = get().pendingPatch;
-      if (!p) return;
+      if (!p) return null;
+
+      const before = violationsNow(get());
+
       if (p.cells.length) get().setCells(p.cells);
       if (p.header) get().updateHeader(p.header);
-      set({ pendingPatch: null });
+
+      for (const op of p.ops ?? []) {
+        switch (op.kind) {
+          case "roster.add": {
+            const id = get().addToRoster({ ...op.data, active: op.data.active ?? true });
+            get().addParticipant(id);
+            break;
+          }
+          case "roster.update":
+            get().updateRosterEmployee(op.employeeId, op.changes);
+            break;
+          case "roster.delete":
+            await get().deleteFromRoster(op.employeeId);
+            break;
+          case "month.remove":
+            get().removeParticipant(op.employeeId);
+            break;
+          case "month.restore":
+            get().addParticipant(op.employeeId);
+            break;
+          case "trip.create":
+            get().addTrip(op.trip);
+            break;
+          case "trip.update":
+            get().updateTrip(op.tripId, op.changes);
+            break;
+          case "month.recalc":
+            await get().recalculateMonth();
+            break;
+        }
+      }
+
+      const after = violationsNow(get());
+      const known = new Set(before.map((v) => v.id));
+      const report: ApplyReport = {
+        at: new Date().toISOString(),
+        summary: p.summary,
+        before: before.filter((v) => v.severity === "error").length,
+        after: after.filter((v) => v.severity === "error").length,
+        fresh: after.filter((v) => v.severity !== "info" && !known.has(v.id)),
+      };
+      set({ pendingPatch: null, lastApply: report });
+      return report;
     },
 
     discardPendingPatch() {
       set({ pendingPatch: null });
+    },
+
+    clearLastApply() {
+      set({ lastApply: null });
     },
 
     /** Явно записване: изпразва отложения запис и връща какво е фиксирано. */

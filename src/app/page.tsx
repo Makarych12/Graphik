@@ -30,7 +30,7 @@ function printDensity(n: number): "roomy" | "normal" | "dense" | "tight" {
 }
 
 export default function SmeniPage() {
-  const { settings, employees, pendingPatch } = useApp();
+  const { settings, employees, pendingPatch, lastApply } = useApp();
   const schedule = useResolved();
   const [editEmployee, setEditEmployee] = useState<string | null>(null);
   const [ai, setAi] = useState(false);
@@ -72,7 +72,7 @@ export default function SmeniPage() {
           <ScheduleGrid onEditEmployee={setEditEmployee} />
         </Swap>
 
-        {!ai && pendingPatch && <PatchPreview />}
+        {!ai && (pendingPatch || lastApply) && <PatchPreview />}
 
         <ValidationPanel
           violations={violations}

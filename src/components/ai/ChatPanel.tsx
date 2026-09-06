@@ -66,7 +66,7 @@ export default function ChatPanel({ onClose }: { onClose: () => void }) {
             let args: Record<string, unknown> = {};
             try { args = JSON.parse(tc.function.arguments || "{}"); } catch { /* моделът е върнал невалиден JSON */ }
             setToolLog((l) => [...l, tc.function.name]);
-            const content = runTool(tc.function.name, args);
+            const content = await runTool(tc.function.name, args);
             convo = [...convo, { role: "tool", tool_call_id: tc.id, name: tc.function.name, content }];
           }
           setHistory(convo);
