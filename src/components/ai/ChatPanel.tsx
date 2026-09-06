@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/lib/store";
 import { TOOL_DEFS, contextSummary, runTool } from "@/lib/ai/tools";
 import { systemPrompt } from "@/lib/ai/naredba";
@@ -29,6 +29,15 @@ export default function ChatPanel({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState("");
   const [toolLog, setToolLog] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Появи ли се предложение, разговорът се придвижва до него: картата е в
+  // потока на съобщенията и иначе би останала под ръба на видимото.
+  const patchId = useApp((s) => s.pendingPatch?.id ?? s.lastApply?.at ?? "");
+  useEffect(() => {
+    if (!patchId) return;
+    const t = setTimeout(() => scrollRef.current?.scrollTo({ top: 1e9, behavior: "smooth" }), 60);
+    return () => clearTimeout(t);
+  }, [patchId]);
 
   const send = async (text: string) => {
     if (!text.trim() || busy) return;
@@ -149,11 +158,12 @@ export default function ChatPanel({ onClose }: { onClose: () => void }) {
           </div>
         )}
         {error && <div className="chip chip-error" style={{ whiteSpace: "normal", height: "auto", padding: 8 }}>{error}</div>}
-      </div>
 
-      {/* Предложението стои извън плъзгащия се разговор: то има собствена
-          височина и собствен скрол, а бутоните му остават винаги видими. */}
-      <PatchPreview />
+        {/* Предложението е част от разговора — карта за потвърждение веднага
+            след последния отговор, в същия скрол. Панелът не се затваря и не
+            се свива, за да се стигне до нея. */}
+        <PatchPreview inChat />
+      </div>
 
       <form
         className="hairline ai-fixed"

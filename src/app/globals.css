@@ -651,22 +651,33 @@ tr.emp-row td.day-cell { transition: none; }
   overscroll-behavior: contain;
 }
 
-/* Картата на предложението: собствена височина и собствен скрол, за да не
-   изяде целия панел при дълъг списък промени. */
-.patch-card {
-  display: flex;
-  flex-direction: column;
-  flex: 0 0 auto;
-  max-height: 45vh;
-  min-height: 0;
-  overflow: hidden;
+/* Картата на предложението стои В ПОТОКА на разговора — като карта за
+   потвърждение в обикновен чат. Затова тя няма собствен скрол: плъзга се
+   заедно със съобщенията в .ai-scroll. Два вложени скрола правеха поведението
+   на колелцето непредсказуемо.
+
+   Без overflow: hidden — иначе картата става собствен скрол-контейнер и
+   залепването (sticky) на шапката и бутоните ѝ спрямо разговора не работи. */
+.patch-card { display: block; }
+
+/* Шапката с чиповете и подножието с бутоните остават залепени за краищата на
+   видимата част, докато картата е на екрана: при дванадесет реда бутоните
+   „Приложи всички“ / „Откажи“ не бягат извън полезрението. */
+.patch-in-chat .patch-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border-top-left-radius: var(--r-lg);
+  border-top-right-radius: var(--r-lg);
 }
 
-.patch-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+.patch-in-chat .patch-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--surface);
+  border-bottom-left-radius: var(--r-lg);
+  border-bottom-right-radius: var(--r-lg);
 }
 
 /* На тесен екран панелът минава на собствен ред под таблицата и спира да е
@@ -678,7 +689,6 @@ tr.emp-row td.day-cell { transition: none; }
     min-width: 100%;
     height: 72dvh;
   }
-  .patch-card { max-height: 40vh; }
 }
 .hairline { border-bottom: 1.5px solid var(--border); }
 a { color: var(--accent-text); }

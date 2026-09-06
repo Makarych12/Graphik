@@ -14,7 +14,12 @@ import type { ResolvedSchedule } from "@/lib/types";
  * отделно, засилено потвърждение. Веднага след записа се показва какво е
  * открила правната проверка.
  */
-export default function PatchPreview() {
+/**
+ * `inChat` — картата стои в потока на разговора вътре в панела на асистента.
+ * Тогава шапката и бутоните ѝ се залепват за краищата на видимата част, за да
+ * са под ръка, без да напускат общия скрол на разговора.
+ */
+export default function PatchPreview({ inChat = false }: { inChat?: boolean } = {}) {
   const { pendingPatch, settings, applyPendingPatch, discardPendingPatch, lastApply, clearLastApply } = useApp();
   const schedule = useResolved();
   const [understood, setUnderstood] = useState(false);
@@ -40,6 +45,8 @@ export default function PatchPreview() {
 
   const groups = useMemo(() => groupCells(pendingPatch, schedule, settings.codes), [pendingPatch, schedule, settings.codes]);
 
+  const cardClass = `card no-print patch-card${inChat ? " patch-in-chat" : ""}`;
+
   if (!schedule) return null;
 
   // ── След прилагане: резултатът от автоматичната правна проверка ──────────
@@ -49,10 +56,10 @@ export default function PatchPreview() {
     const warn = lastApply.fresh.filter((v) => v.severity === "warning");
     return (
       <div
-        className="card no-print patch-card"
+        className={cardClass}
         style={{ borderColor: bad.length ? "var(--error)" : "var(--ok, var(--border))", borderWidth: 2, marginTop: 10 }}
       >
-        <div className="ai-fixed" style={{ background: bad.length ? "var(--error-soft)" : "var(--surface-2)", padding: "8px 12px", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <div className="patch-head" style={{ background: bad.length ? "var(--error-soft)" : "var(--surface-2)", padding: "8px 12px", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <strong style={{ fontSize: 13 }}>Промяната е приложена</strong>
           <span className={`chip ${lastApply.after > lastApply.before ? "chip-error" : lastApply.after < lastApply.before ? "chip-ok" : ""}`}>
             нарушения: {lastApply.before} → {lastApply.after}
@@ -113,10 +120,10 @@ export default function PatchPreview() {
 
   return (
     <div
-      className="card no-print patch-card"
+      className={cardClass}
       style={{ borderColor: danger ? "var(--error)" : "var(--accent)", borderWidth: 2, marginTop: 10 }}
     >
-      <div className="ai-fixed" style={{ background: danger ? "var(--error-soft)" : "var(--accent-soft)", padding: "8px 12px", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+      <div className="patch-head" style={{ background: danger ? "var(--error-soft)" : "var(--accent-soft)", padding: "8px 12px", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <strong style={{ fontSize: 13 }}>
           {danger ? "Необратимо действие — чака потвърждение" : "Предложение от ИИ — чака потвърждение"}
         </strong>
@@ -193,8 +200,9 @@ export default function PatchPreview() {
 
       </div>
 
+      <div className="patch-foot">
       {danger && (
-        <div className="ai-fixed" style={{ padding: 12, background: "var(--error-soft)", borderTop: "1.5px solid var(--error)", display: "grid", gap: 8 }}>
+        <div style={{ padding: 12, background: "var(--error-soft)", borderTop: "1.5px solid var(--error)", display: "grid", gap: 8 }}>
           <strong style={{ fontSize: 13, color: "var(--error)" }}>⚠ {danger.title}</strong>
           <div style={{ fontSize: 13, lineHeight: 1.5 }}>{danger.text}</div>
           <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
@@ -205,12 +213,12 @@ export default function PatchPreview() {
       )}
 
       {failed && (
-        <div className="ai-fixed" style={{ padding: "8px 12px", background: "var(--error-soft)", color: "var(--error)", fontSize: 12, fontWeight: 700 }}>
+        <div style={{ padding: "8px 12px", background: "var(--error-soft)", color: "var(--error)", fontSize: 12, fontWeight: 700 }}>
           Промяната не беше приложена: {failed}
         </div>
       )}
 
-      <div className="ai-fixed" style={{ display: "flex", gap: 8, padding: 10, borderTop: "1.5px solid var(--border)" }}>
+      <div style={{ display: "flex", gap: 8, padding: 10, borderTop: "1.5px solid var(--border)", background: "var(--surface)" }}>
         <button
           className={danger ? "btn btn-danger" : "btn btn-primary"}
           style={{ flex: 1 }}
@@ -220,6 +228,7 @@ export default function PatchPreview() {
           {danger ? danger.confirmLabel : total > 1 ? `Приложи всички (${total})` : "Приложи промяната"}
         </button>
         <button className="btn" style={{ flex: 1 }} disabled={busy} onClick={discardPendingPatch}>Откажи</button>
+      </div>
       </div>
     </div>
   );
