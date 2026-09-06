@@ -34,6 +34,9 @@ export default function ChatPanel({ onClose }: { onClose: () => void }) {
     if (!text.trim() || busy) return;
     setError("");
     setInput("");
+    // Ново съобщение = нов ход: извикванията от този ход се събират в едно
+    // предложение, а непотвърденото отпреди си остава недокоснато.
+    useApp.getState().beginTurn();
     const userMsg: Msg = { role: "user", content: text };
     let convo: Msg[] = [...history, userMsg];
     setHistory(convo);

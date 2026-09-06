@@ -394,7 +394,10 @@ async function readView(args: Record<string, unknown>): Promise<View | { error: 
  * поискания и няма друго предложение, което да чака потвърждение (иначе
  * второто би изместило първото, без нарядчикът да го е видял).
  */
-function writeTarget(args: Record<string, unknown>): { schedule: ResolvedSchedule } | { error: string } {
+function writeTarget(
+  args: Record<string, unknown>,
+  opts: { exclusive?: boolean } = {},
+): { schedule: ResolvedSchedule } | { error: string } {
   const st = useApp.getState();
   const cur = resolved(st);
   if (!cur) return { error: "Няма зареден график." };
@@ -408,21 +411,43 @@ function writeTarget(args: Record<string, unknown>): { schedule: ResolvedSchedul
         "Промени се правят само в отворения месец — помоли нарядчика да отвори другия месец от лентата с месеците.",
     };
   }
-  if (st.pendingPatch) {
-    return {
-      error:
-        "Има предложение, което още чака потвърждение от нарядчика. Изчакай той да натисне „Приложи“ или „Откажи“ и чак тогава предлагай следващата промяна.",
-    };
+
+  const p = st.pendingPatch;
+  if (p) {
+    // Отпреди текущото съобщение: нарядчикът още не се е произнесъл по него.
+    if (p.turnId !== st.turnId) {
+      return {
+        error:
+          "Има предложение от предишно съобщение, което още чака потвърждение. Изчакай нарядчикът да натисне „Приложи всички“ или „Откажи“ и чак тогава предлагай следващата промяна.",
+      };
+    }
+    if (p.exclusive) {
+      return {
+        error:
+          "Текущото предложение (съставяне на цял месец или необратимо изтриване) се показва самостоятелно и не се смесва с други промени. Предложи останалото след като нарядчикът се произнесе по него.",
+      };
+    }
+    if (opts.exclusive) {
+      return {
+        error:
+          "Това действие се предлага само самостоятелно, а вече си събрал други промени в текущото предложение. Предложи го в отделно съобщение.",
+      };
+    }
   }
   return { schedule: cur };
 }
 
 function awaiting(extra: Record<string, unknown>): string {
+  const p = useApp.getState().pendingPatch;
+  const collected = (p?.cells.length ?? 0) + (p?.ops?.length ?? 0);
   return J({
     applied: false,
     awaitingConfirmation: true,
     message:
-      "Предложението е показано на нарядчика като предпросмотър „беше → ще стане“ и чака потвърждение. Не твърди, че промяната вече е направена.",
+      "Промяната е добавена към предложението, което нарядчикът вижда като предпросмотър „беше → ще стане“. " +
+      "Ако задачата изисква още еднотипни промени, извикай останалите инструменти ВЕДНАГА в същия отговор — " +
+      "всички се събират в едно общо предложение с един бутон „Приложи всички“. Не твърди, че промяната вече е направена.",
+    collectedSoFar: collected,
     ...extra,
   });
 }
@@ -1307,7 +1332,7 @@ export async function runTool(rawName: string, args: Record<string, unknown>): P
     }
 
     case "delete_employee_permanently": {
-      const target = writeTarget(args);
+      const target = writeTarget(args, { exclusive: true });
       if ("error" in target) return err(target.error);
       const emp = findEmployee(pick(args, "employee_name") as string, pick(args, "employee_id", "employeeId") as string);
       if (!emp) return err("Не е намерен такъв служител.");
@@ -1342,6 +1367,7 @@ export async function runTool(rawName: string, args: Record<string, unknown>): P
             employeeId: emp.id,
           },
         ],
+        exclusive: true,
         danger: {
           title: "Необратимо изтриване",
           text:
@@ -1393,7 +1419,7 @@ export async function runTool(rawName: string, args: Record<string, unknown>): P
           'generate_full_month работи само за module "smeni". Повеските се съставят една по една с create_povesa или с assign_next_trip.',
         );
       }
-      const target = writeTarget(args);
+      const target = writeTarget(args, { exclusive: true });
       if ("error" in target) return err(target.error);
       const schedule = target.schedule;
       const dim = daysInMonth(schedule.header.year, schedule.header.month);
@@ -1440,6 +1466,7 @@ export async function runTool(rawName: string, args: Record<string, unknown>): P
           String(pick(args, "summary") ?? "") ||
           `Съставяне наново на графика за ${schedule.header.month}/${schedule.header.year} по базовите шаблони`,
         cells: changes,
+        exclusive: true,
         source: "ai",
       });
       return awaiting({

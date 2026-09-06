@@ -83,6 +83,8 @@ export default function PatchPreview() {
   const danger = pendingPatch.danger;
   const ops = pendingPatch.ops ?? [];
   const canApply = !danger || understood;
+  /** Колко отделни промени съдържа предложението — за етикета на бутона. */
+  const total = pendingPatch.cells.length + ops.length;
 
   const apply = async () => {
     setBusy(true);
@@ -112,7 +114,11 @@ export default function PatchPreview() {
         )}
       </div>
 
-      <div style={{ padding: "8px 12px", fontSize: 13 }}>{pendingPatch.summary}</div>
+      <div style={{ padding: "8px 12px", fontSize: 13, display: "grid", gap: 3 }}>
+        {(pendingPatch.summaries?.length ? pendingPatch.summaries : [pendingPatch.summary]).map((t, i) => (
+          <div key={i}>{t}</div>
+        ))}
+      </div>
 
       {ops.length > 0 && (
         <div style={{ padding: "0 12px 8px", display: "grid", gap: 8 }}>
@@ -187,7 +193,7 @@ export default function PatchPreview() {
           disabled={!canApply || busy}
           onClick={() => void apply()}
         >
-          {danger ? danger.confirmLabel : "Приложи промените"}
+          {danger ? danger.confirmLabel : total > 1 ? `Приложи всички (${total})` : "Приложи промяната"}
         </button>
         <button className="btn" style={{ flex: 1 }} disabled={busy} onClick={discardPendingPatch}>Откажи</button>
       </div>

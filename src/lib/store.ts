@@ -44,6 +44,19 @@ export type Patch = {
   id: string;
   /** Кратко описание, което ИИ дава на предложението. */
   summary: string;
+  /** Отделните описания, когато предложението е събрано от няколко извиквания. */
+  summaries?: string[];
+  /**
+   * Ходът на разговора, в който е съставено. Извикванията в рамките на един
+   * отговор на модела се наливат в едно предложение; ново съобщение от
+   * нарядчика започва нов ход и не пипа непотвърденото отпреди.
+   */
+  turnId?: string;
+  /**
+   * Предложение, което се показва само самостоятелно и не се смесва с
+   * обикновени поправки: необратимо изтриване и съставяне на цял месец.
+   */
+  exclusive?: boolean;
   cells: CellChange[];
   header?: Partial<ScheduleHeader>;
   /** Промени извън клетките — по реда, в който трябва да се приложат. */
@@ -139,6 +152,11 @@ type State = {
   /** Преизчислява нормата от производствения календар и пренесените остатъци. */
   recalculateMonth: () => Promise<{ normHours: number; participants: number }>;
 
+  /** Идентификатор на текущия ход — сменя се при всяко ново съобщение. */
+  turnId: string;
+  /** Отбелязва начало на нов ход (ново съобщение от нарядчика). */
+  beginTurn: () => void;
+
   proposePatch: (p: Omit<Patch, "id">) => void;
   applyPendingPatch: () => Promise<ApplyReport | null>;
   discardPendingPatch: () => void;
@@ -180,6 +198,38 @@ export function resolved(s: Pick<State, "schedule" | "employees">): ResolvedSche
   const { participants: _p, ...rest } = s.schedule;
   void _p;
   return { ...rest, employees: s.employees };
+}
+
+/** Реална ли е промяната по клетката, или се връща същото. */
+function changesSomething(c: CellChange): boolean {
+  return (
+    (c.from?.codeId ?? null) !== (c.to?.codeId ?? null) ||
+    c.to?.extension?.approved !== c.from?.extension?.approved
+  );
+}
+
+/**
+ * Слива две предложения в едно. При два пъти пипана клетка се пази истинското
+ * „беше“ от първата промяна и последното „става“ — иначе предпросмотърът би
+ * показал междинно състояние, което нарядчикът никога не е виждал.
+ */
+function mergePatches(a: Patch, b: Patch): Patch {
+  const cells = [...a.cells];
+  for (const ch of b.cells) {
+    const i = cells.findIndex((c) => c.employeeId === ch.employeeId && c.day === ch.day);
+    if (i >= 0) cells[i] = { ...ch, from: cells[i].from };
+    else cells.push(ch);
+  }
+  const summaries = [...new Set([...(a.summaries ?? [a.summary]), ...(b.summaries ?? [b.summary])])];
+  const header = a.header || b.header ? { ...a.header, ...b.header } : undefined;
+  return {
+    ...a,
+    cells: cells.filter(changesSomething),
+    ops: [...(a.ops ?? []), ...(b.ops ?? [])],
+    ...(header ? { header } : {}),
+    summaries,
+    summary: summaries.join(" · "),
+  };
 }
 
 /** Пълната правна картина в момента: смени + повески. */
@@ -268,6 +318,8 @@ function patternCells(
 const ROSTER_FIELDS = ["serviceNo", "name", "position", "annualLeaveDays", "dailyNorm"] as const;
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
+/** Броячът гарантира различен ход и при две съобщения в една милисекунда. */
+let turnSeq = 0;
 
 export const useApp = create<State>((set, get) => {
   const persist = async () => {
@@ -355,6 +407,7 @@ export const useApp = create<State>((set, get) => {
     employees: [],
     tripBoard: null,
     pendingPatch: null,
+    turnId: "t0",
     lastApply: null,
     online: true,
     dirty: false,
@@ -760,8 +813,27 @@ export const useApp = create<State>((set, get) => {
       return { normHours, participants: cur.participants.length };
     },
 
+    beginTurn() {
+      set({ turnId: `t${++turnSeq}${Date.now().toString(36)}` });
+    },
+
+    /**
+     * Събира предложенията от един ход в едно. Когато нарядчикът каже
+     * „попълни имената на всички“, моделът прави дванадесет извиквания в един
+     * свой отговор — те трябва да се покажат като ЕДНО превю с дванадесет
+     * реда, а не като дванадесет последователни питания.
+     */
     proposePatch(p) {
-      set({ pendingPatch: { ...p, id: `p${Date.now().toString(36)}` } });
+      const turnId = get().turnId;
+      const incoming: Patch = {
+        ...p,
+        id: `p${Date.now().toString(36)}`,
+        turnId,
+        summaries: [p.summary],
+      };
+      const cur = get().pendingPatch;
+      const mergeable = cur && cur.turnId === turnId && !cur.exclusive && !incoming.exclusive;
+      set({ pendingPatch: mergeable ? mergePatches(cur, incoming) : incoming });
     },
 
     /**
